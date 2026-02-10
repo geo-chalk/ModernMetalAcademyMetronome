@@ -6,13 +6,13 @@ const MarkedSlider = ({ label, value, setter, min, max, unit, defaultValue, step
   const markerLeft = `calc(${fraction * 100}% + ${(0.5 - fraction) * thumbSize}px)`;
 
   return (
-    <section className="py-2">
+    <section className="py-2 select-none">
       <div className="flex justify-between text-[10px] font-bold mb-3 text-white/40 tracking-wider">
         <span>{label}</span>
-        {/* Use displayValue if provided (for Duration), otherwise use value + unit */}
         <span className="text-white font-mono opacity-80">{displayValue || `${value}${unit}`}</span>
       </div>
-      <div className="relative w-full h-4 flex items-center">
+      {/* Added touch-none here to prevent scroll-chaining */}
+      <div className="relative w-full h-4 flex items-center touch-none">
         <div
           className="absolute h-4 w-0.5 bg-white/20 pointer-events-none rounded-full"
           style={{ left: markerLeft, transform: 'translateX(-50%)', zIndex: 0 }}

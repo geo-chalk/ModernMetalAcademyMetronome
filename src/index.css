@@ -18,9 +18,30 @@ body {
   color: #ffffff;
   font-family: system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
 }
 
 button, input {
   font-family: inherit;
   color: inherit;
+}
+
+html, body {
+  /* Use svh to account for mobile URL bars accurately */
+  height: 100svh;
+  width: 100vw;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  position: fixed;
+  /* Prevents the 'pull to refresh' and URL bar movement */
+  overscroll-behavior: none;
+  background-color: #000000;
+  /* Removes the gray tap box on mobile */
+  -webkit-tap-highlight-color: transparent;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
 }
