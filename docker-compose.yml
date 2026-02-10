@@ -1,0 +1,12 @@
+services:
+  metronome:
+    build: .
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      # This "anonymous volume" tells Docker to keep the internal
+      # node_modules and NOT overwrite them with your local ones.
+      - /app/node_modules
+    environment:
+      - CHOKIDAR_USEPOLLING=true
