@@ -1,0 +1,13 @@
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+env/
+venv/
+.git
+*.md
+.DS_Store
+*.node_modules
+*.idea
+dist
