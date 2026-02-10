@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Square, Play } from 'lucide-react';
 import { useMetronome } from './hooks/useMetronome';
-import { useKeyboardControls } from './hooks/useKeyboardControls'; // New Hook
+import { useKeyboardControls } from './hooks/useKeyboardControls';
 import MarkedSlider from './components/MarkedSlider';
 import BeatIndicators from './components/BeatIndicators';
 import ModeSelector from './components/ModeSelector';
@@ -30,16 +30,10 @@ export default function App() {
     stop();
   }, [mode, bpm, stop]);
 
-  // Combined toggle for Keyboard and Button use
   const toggleMetronome = useCallback(() => {
-    if (isActive) {
-      handleStop();
-    } else {
-      handleStart();
-    }
+    isActive ? handleStop() : handleStart();
   }, [isActive, handleStart, handleStop]);
 
-  // Hook up the spacebar logic
   useKeyboardControls(toggleMetronome);
 
   const displayBpm = isActive ? bpm : (mode === 'trainer' ? trainerStartBpm : constantBpm);
@@ -63,45 +57,57 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-[100dvh] flex flex-col items-center pt-8 bg-black text-white px-4 overflow-y-auto pb-10">
-      <div className="bg-[#1E1E1E] p-6 rounded-md w-full max-w-md border border-white/5 flex flex-col shadow-2xl">
-        <ModeSelector mode={mode} setMode={setMode} onStop={handleStop} />
+    // Outer wrapper ensures the app stays in the viewport
+    <div className="fixed inset-0 bg-black text-white flex items-center justify-center p-4 overflow-hidden select-none">
 
-        <div className="mt-2">
-          <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive} />
-          <BeatIndicators isActive={isActive} currentBeat={currentBeat} />
+      {/* The Box - Now with a max-height to ensure it never exceeds the screen */}
+      <div className="bg-[#1E1E1E] w-full max-w-md max-h-full rounded-2xl border border-white/5 flex flex-col shadow-2xl overflow-hidden">
+
+        {/* Internal padding and scroll area for the content */}
+        <div className="p-6 flex-1 overflow-y-auto no-scrollbar flex flex-col gap-4">
+          <ModeSelector mode={mode} setMode={setMode} onStop={handleStop} />
+
+          <div>
+            <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive} />
+            <BeatIndicators isActive={isActive} currentBeat={currentBeat} />
+          </div>
+
+          <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress} mode={mode} />
+
+          <div className="flex flex-col gap-1">
+            <MarkedSlider
+              label={mode === 'trainer' ? "Start BPM" : "Tempo"}
+              value={mode === 'trainer' ? trainerStartBpm : (isActive ? bpm : constantBpm)}
+              setter={displaySetter}
+              min={40} max={280} unit="bpm" defaultValue={120}
+            />
+
+            {mode === 'trainer' && (
+              <div className="mt-1 pt-2 border-t border-white/5 flex flex-col gap-1">
+                <MarkedSlider label="Increment" value={increment} setter={setIncrement} min={1} max={10} unit="bpm" defaultValue={2} />
+                <MarkedSlider label="Interval" value={stepSeconds} setter={setStepSeconds} min={5} max={50} unit="s" defaultValue={10} />
+                <MarkedSlider
+                  label="Duration" value={totalSeconds} setter={setTotalSeconds}
+                  min={30} max={600} step={30} displayValue={formatDuration(totalSeconds)} defaultValue={120}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
-        <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress} mode={mode} />
-
-        <div className="flex flex-col gap-1">
-          <MarkedSlider
-            label={mode === 'trainer' ? "Start BPM" : "Tempo"}
-            value={mode === 'trainer' ? trainerStartBpm : (isActive ? bpm : constantBpm)}
-            setter={displaySetter}
-            min={40} max={280} unit="bpm" defaultValue={120}
-          />
-
-          {mode === 'trainer' && (
-            <div className="mt-2 pt-2 border-t border-white/5 flex flex-col gap-1">
-              <MarkedSlider label="Increment" value={increment} setter={setIncrement} min={1} max={10} unit="bpm" defaultValue={2} />
-              <MarkedSlider label="Interval" value={stepSeconds} setter={setStepSeconds} min={5} max={50} unit="s" defaultValue={10} />
-              <MarkedSlider
-                label="Duration" value={totalSeconds} setter={setTotalSeconds}
-                min={30} max={600} step={30} displayValue={formatDuration(totalSeconds)} defaultValue={120}
-              />
-            </div>
-          )}
+        {/* Action Button - Locked at the bottom of the Box */}
+        <div className="p-6 pt-0">
+          <button
+            onClick={toggleMetronome}
+            className={`w-full py-4 rounded-xl flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] transition-all duration-200
+              ${isActive
+                ? 'bg-[#CC0000] hover:bg-[#EE0000] active:bg-[#AA0000]'
+                : 'bg-[#FF5500] hover:bg-[#FF7733] active:bg-[#CC4400]'}
+              text-white active:scale-[0.97] transform`}
+          >
+            {isActive ? <><Square size={16} fill="currentColor"/> Stop</> : <><Play size={16} fill="currentColor"/> Start</>}
+          </button>
         </div>
-
-        <button
-          onClick={toggleMetronome}
-          className={`w-full py-4 mt-6 rounded-md flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] transition-all duration-200
-            ${isActive ? 'bg-[#CC0000] hover:bg-[#EE0000]' : 'bg-[#FF5500] hover:bg-[#FF7733]'}
-            text-white active:scale-[0.98] transform`}
-        >
-          {isActive ? <><Square size={16} fill="currentColor"/> Stop Session</> : <><Play size={16} fill="currentColor"/> Start Session</>}
-        </button>
       </div>
     </div>
   );
