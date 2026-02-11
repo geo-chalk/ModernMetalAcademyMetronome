@@ -5,8 +5,10 @@ services:
       - "5173:5173"
     volumes:
       - .:/app
-      # This "anonymous volume" tells Docker to keep the internal
-      # node_modules and NOT overwrite them with your local ones.
       - /app/node_modules
+      - /run/host-services/ssh-auth.sock:/ssh-agent
     environment:
       - CHOKIDAR_USEPOLLING=true
+      - GIT_USER_NAME=${GIT_USER_NAME}
+      - GIT_USER_EMAIL=${GIT_USER_EMAIL}
+      - SSH_AUTH_SOCK=/ssh-agent
