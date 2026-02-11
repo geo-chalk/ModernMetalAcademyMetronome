@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { memo } from 'react';
 
-const TrainerProgress = ({ isActive, progress, totalProgress, mode }) => {
+const TrainerProgress = memo(({ isActive, progress, totalProgress, mode }) => {
   if (mode !== 'trainer') return null;
 
   return (
@@ -12,11 +12,8 @@ const TrainerProgress = ({ isActive, progress, totalProgress, mode }) => {
         </div>
         <div className="w-full bg-white/5 h-[2px] rounded-full overflow-hidden">
           <div
-            className="bg-[#FF5500] h-full"
-            style={{
-              width: `${isActive ? progress : 0}%`,
-              transition: progress === 0 ? 'none' : 'width 100ms linear'
-            }}
+            className="bg-[#FF5500] h-full transition-all duration-[32ms] linear"
+            style={{ width: `${isActive ? progress : 0}%` }}
           />
         </div>
       </div>
@@ -28,13 +25,13 @@ const TrainerProgress = ({ isActive, progress, totalProgress, mode }) => {
         </div>
         <div className="w-full bg-white/5 h-[2px] rounded-full overflow-hidden">
           <div
-            className="bg-white/40 h-full transition-all duration-300 linear"
+            className="bg-white/40 h-full transition-all duration-[100ms] linear"
             style={{ width: `${isActive ? totalProgress : 0}%` }}
           />
         </div>
       </div>
     </div>
   );
-};
+});
 
 export default TrainerProgress;

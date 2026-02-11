@@ -1,13 +1,17 @@
 import React, { useState, useCallback } from 'react';
-import { Square, Play } from 'lucide-react';
 import packageJson from '../package.json';
 import { useMetronome } from './hooks/useMetronome';
 import { useKeyboardControls } from './hooks/useKeyboardControls';
+
+// Components
 import MarkedSlider from './components/MarkedSlider';
 import BeatIndicators from './components/BeatIndicators';
 import ModeSelector from './components/ModeSelector';
 import BPMDisplay from './components/BPMDisplay';
 import TrainerProgress from './components/TrainerProgress';
+import TimeSignatureSelector from './components/TimeSignatureSelector';
+import VolumeSlider from './components/VolumeSlider';
+import PlayButton from './components/PlayButton';
 
 export default function App() {
   const [mode, setMode] = useState('trainer');
@@ -16,15 +20,18 @@ export default function App() {
   const [increment, setIncrement] = useState(2);
   const [stepSeconds, setStepSeconds] = useState(10);
   const [totalSeconds, setTotalSeconds] = useState(120);
+  const [timeSigTop, setTimeSigTop] = useState(4);
+  const [timeSigBottom, setTimeSigBottom] = useState(4);
 
   const {
-    bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, start, stop
+    bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress,
+    start, stop, beatsPerMeasure, volume, setVolume
   } = useMetronome(mode === 'trainer' ? trainerStartBpm : constantBpm);
 
   const handleStart = useCallback(() => {
     const startTempo = mode === 'trainer' ? trainerStartBpm : constantBpm;
-    start({ mode, increment, stepSeconds, totalSeconds }, startTempo);
-  }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, start]);
+    start({ mode, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom }, startTempo);
+  }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, start]);
 
   const handleStop = useCallback(() => {
     if (mode === 'constant') setConstantBpm(bpm);
@@ -52,28 +59,38 @@ export default function App() {
   const formatDuration = (sec) => {
     const m = Math.floor(sec / 60);
     const s = sec % 60;
-    if (m === 0) return `${s}s`;
-    if (s === 0) return `${m}m`;
-    return `${m}m ${s}s`;
+    return m === 0 ? `${s}s` : s === 0 ? `${m}m` : `${m}m ${s}s`;
   };
 
   return (
     <div className="fixed inset-0 w-full h-[100svh] bg-black text-white flex items-center justify-center overflow-hidden touch-none p-2 sm:p-4">
       <div className="bg-[#1E1E1E] w-full max-w-md h-full max-h-full sm:h-auto rounded-2xl border border-white/5 flex flex-col shadow-2xl overflow-hidden">
 
-        {/* Header - Fixed */}
-        <div className="p-4 sm:p-6 pb-0 flex-none">
+        {/* Header */}
+        <div className="p-4 sm:p-6 pb-1 flex-none">
           <ModeSelector mode={mode} setMode={setMode} onStop={handleStop} />
+          <VolumeSlider volume={volume} setVolume={setVolume} />
         </div>
 
-        {/* Scrollable Middle Area - FIX: Removed justify-center */}
+        {/* Main Content */}
         <div className="px-4 sm:px-6 flex-1 overflow-y-auto no-scrollbar flex flex-col touch-pan-y">
-          {/* Content Wrapper with auto-margin to center when there is space */}
-          <div className="my-auto py-4 space-y-4">
-            <div className="flex-none">
-              <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive} />
-              <BeatIndicators isActive={isActive} currentBeat={currentBeat} />
+          <div className="my-auto pt-0 pb-4 space-y-4">
+
+            <div className="flex items-center justify-between gap-4 mb-0">
+              <div className="flex-1">
+                <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive} />
+              </div>
+              <TimeSignatureSelector
+                top={timeSigTop} bottom={timeSigBottom}
+                setTop={setTimeSigTop} setBottom={setTimeSigBottom}
+                isActive={isActive}
+              />
             </div>
+
+            <BeatIndicators
+              isActive={isActive} currentBeat={currentBeat}
+              beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}
+            />
 
             <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress} mode={mode} />
 
@@ -82,7 +99,7 @@ export default function App() {
                 label={mode === 'trainer' ? "Start BPM" : "Tempo"}
                 value={mode === 'trainer' ? trainerStartBpm : (isActive ? bpm : constantBpm)}
                 setter={displaySetter}
-                min={40} max={280} unit="bpm" defaultValue={120}
+                min={40} max={300} unit="bpm" defaultValue={120}
               />
 
               {mode === 'trainer' && (
@@ -99,18 +116,9 @@ export default function App() {
           </div>
         </div>
 
-        {/* Footer - Fixed */}
+        {/* Footer */}
         <div className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E]">
-          <button
-            onClick={toggleMetronome}
-            className={`w-full py-4 rounded-xl flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] transition-all duration-200
-              ${isActive ? 'bg-[#CC0000]' : 'bg-[#FF5500]'}
-              text-white active:scale-[0.97]`}
-          >
-            {isActive ? <Square size={16} fill="currentColor"/> : <Play size={16} fill="currentColor"/>}
-            {isActive ? 'Stop' : 'Start'}
-          </button>
-
+          <PlayButton isActive={isActive} onClick={toggleMetronome} />
           <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase">
             v{packageJson.version}
           </span>
