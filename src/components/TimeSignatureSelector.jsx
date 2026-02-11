@@ -3,7 +3,7 @@ import { ChevronDown } from 'lucide-react';
 
 const TimeSignatureSelector = ({ top, bottom, setTop, setBottom, isActive }) => {
   return (
-    <div className="flex items-center border-l border-white/10 pl-6">
+    <div className="flex items-center border-l border-white/10 pl-6 h-20">
       <div
         className={`relative flex flex-col items-center justify-center p-2 rounded-lg transition-all border border-transparent ${
           !isActive ? 'bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/10 cursor-pointer' : 'opacity-50'

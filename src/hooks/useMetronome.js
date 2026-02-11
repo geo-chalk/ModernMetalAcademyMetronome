@@ -13,21 +13,30 @@ export const useMetronome = (initialBpm) => {
   const clickSynth = useRef(null);
   const progressIntervalRef = useRef(null);
   const totalIntervalRef = useRef(null);
+  const countdownTimeoutRef = useRef(null); // Ref to track the countdown timeout
   const startTimeRef = useRef(0);
 
+  // Keep Tone.js BPM in sync with React state
   useEffect(() => {
     Tone.getTransport().bpm.value = bpm;
   }, [bpm]);
 
+  // Keep Tone.js Volume in sync
   useEffect(() => {
     Tone.getDestination().volume.value = volume;
   }, [volume]);
 
   const stop = () => {
+    // 1. Stop Audio
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
+
+    // 2. Clear all Timers/Intervals
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     if (totalIntervalRef.current) clearInterval(totalIntervalRef.current);
+    if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
+
+    // 3. Reset State
     setIsActive(false);
     setCurrentBeat(1);
     setStepProgress(0);
@@ -35,10 +44,11 @@ export const useMetronome = (initialBpm) => {
   };
 
   const start = async (settings, startBpm) => {
-    // 1. Initial Setup
-    Tone.getTransport().cancel();
-    Tone.getTransport().stop();
-    Tone.getTransport().position = 0;
+    await Tone.start();
+
+    // Reset everything before starting
+    stop();
+
     Tone.getTransport().timeSignature = settings.timeSigTop;
     setBeatsPerMeasure(settings.timeSigTop);
     setBpm(startBpm);
@@ -48,7 +58,7 @@ export const useMetronome = (initialBpm) => {
       envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 }
     }).toDestination();
 
-    // 2. Schedule the main metronome loop
+    // Schedule the main metronome loop
     Tone.getTransport().scheduleRepeat((time) => {
       const position = Tone.getTransport().position.split(':');
       const beat = parseInt(position[1]);
@@ -62,28 +72,56 @@ export const useMetronome = (initialBpm) => {
     }, "4n");
 
     setIsActive(true);
+
     const secondsPerBeat = 60 / startBpm;
     const now = Tone.now();
-
-    // 3. Dynamic Countdown Logic based on settings.countdownBars
     const totalCountdownBeats = settings.timeSigTop * settings.countdownBars;
 
+    // Play Countdown Clicks
     for (let i = 0; i < totalCountdownBeats; i++) {
       const clickTime = now + (i * secondsPerBeat);
-      // Determine if it's the start of a bar in the countdown
       const isStartOfBar = i % settings.timeSigTop === 0;
       const freq = isStartOfBar ? 1800 : 1200;
       clickSynth.current.triggerAttackRelease(freq, "32n", clickTime);
     }
 
-    // 4. Start Transport after the countdown duration
-    const countdownDuration = totalCountdownBeats * secondsPerBeat;
-    Tone.getTransport().start(`+${countdownDuration}`);
+    const countdownDurationSeconds = totalCountdownBeats * secondsPerBeat;
+    Tone.getTransport().start(`+${countdownDurationSeconds}`);
 
-    // 5. Setup Trainer Intervals (wrapped in countdown duration)
-    setTimeout(() => {
-       // ... existing trainer logic (setIntervals for progress, etc.)
-    }, countdownDuration * 1000);
+    // Start UI logic exactly when countdown finishes
+    countdownTimeoutRef.current = setTimeout(() => {
+      startTimeRef.current = Date.now();
+
+      if (settings.mode === 'trainer') {
+        const stepMs = settings.stepSeconds * 1000;
+        const totalMs = settings.totalSeconds * 1000;
+        let stepStartTime = Date.now();
+
+        progressIntervalRef.current = setInterval(() => {
+          const now = Date.now();
+          const elapsedInStep = now - stepStartTime;
+
+          if (elapsedInStep >= stepMs) {
+            stepStartTime = now; // Reset step anchor
+            setStepProgress(0);
+            setBpm(prev => prev + settings.increment);
+          } else {
+            setStepProgress((elapsedInStep / stepMs) * 100);
+          }
+        }, 32);
+
+        totalIntervalRef.current = setInterval(() => {
+          const elapsedTotal = Date.now() - startTimeRef.current;
+          const progressTotal = (elapsedTotal / totalMs) * 100;
+
+          if (progressTotal >= 100) {
+            stop();
+          } else {
+            setTotalProgress(progressTotal);
+          }
+        }, 100);
+      }
+    }, countdownDurationSeconds * 1000);
   };
 
   return { bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, start, stop, beatsPerMeasure, volume, setVolume };
