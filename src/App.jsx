@@ -12,6 +12,7 @@ import TrainerProgress from './components/TrainerProgress';
 import TimeSignatureSelector from './components/TimeSignatureSelector';
 import VolumeSlider from './components/VolumeSlider';
 import PlayButton from './components/PlayButton';
+import CountdownSelector from './components/CountdownSelector';
 
 export default function App() {
   const [mode, setMode] = useState('trainer');
@@ -22,16 +23,21 @@ export default function App() {
   const [totalSeconds, setTotalSeconds] = useState(120);
   const [timeSigTop, setTimeSigTop] = useState(4);
   const [timeSigBottom, setTimeSigBottom] = useState(4);
+  const [countdownBars, setCountdownBars] = useState(1); // Default to 1 bar
 
   const {
     bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress,
     start, stop, beatsPerMeasure, volume, setVolume
   } = useMetronome(mode === 'trainer' ? trainerStartBpm : constantBpm);
 
-  const handleStart = useCallback(() => {
-    const startTempo = mode === 'trainer' ? trainerStartBpm : constantBpm;
-    start({ mode, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom }, startTempo);
-  }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, start]);
+    // Update handleStart to include countdownBars
+    const handleStart = useCallback(() => {
+      const startTempo = mode === 'trainer' ? trainerStartBpm : constantBpm;
+      start({
+        mode, increment, stepSeconds, totalSeconds,
+        timeSigTop, timeSigBottom, countdownBars
+      }, startTempo);
+    }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start]);
 
   const handleStop = useCallback(() => {
     if (mode === 'constant') setConstantBpm(bpm);
@@ -76,13 +82,26 @@ export default function App() {
         <div className="px-4 sm:px-6 flex-1 overflow-y-auto no-scrollbar flex flex-col touch-pan-y">
           <div className="my-auto pt-0 pb-4 space-y-4">
 
-            <div className="flex items-center justify-between gap-4 mb-0">
+            {/* Optimized Layout Row */}
+            <div className="flex items-center justify-between mb-0">
+              {/* Left: Pre-roll */}
+              <CountdownSelector
+                value={countdownBars}
+                setter={setCountdownBars}
+                isActive={isActive}
+              />
+
+              {/* Center: BPM */}
               <div className="flex-1">
                 <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive} />
               </div>
+
+              {/* Right: Time Signature */}
               <TimeSignatureSelector
-                top={timeSigTop} bottom={timeSigBottom}
-                setTop={setTimeSigTop} setBottom={setTimeSigBottom}
+                top={timeSigTop}
+                bottom={timeSigBottom}
+                setTop={setTimeSigTop}
+                setBottom={setTimeSigBottom}
                 isActive={isActive}
               />
             </div>
@@ -105,10 +124,17 @@ export default function App() {
               {mode === 'trainer' && (
                 <div className="mt-2 pt-4 border-t border-white/5 flex flex-col gap-1">
                   <MarkedSlider label="Increment" value={increment} setter={setIncrement} min={1} max={10} unit="bpm" defaultValue={2} />
-                  <MarkedSlider label="Interval" value={stepSeconds} setter={setStepSeconds} min={5} max={50} unit="s" defaultValue={10} />
+                  <MarkedSlider
+                    label="Interval" value={stepSeconds} setter={setStepSeconds}
+                    min={5} max={90} step={5}
+                    displayValue={formatDuration(stepSeconds)}
+                    defaultValue={10}
+                  />
                   <MarkedSlider
                     label="Duration" value={totalSeconds} setter={setTotalSeconds}
-                    min={30} max={600} step={30} displayValue={formatDuration(totalSeconds)} defaultValue={120}
+                    min={30} max={600} step={30}
+                    displayValue={formatDuration(totalSeconds)}
+                    defaultValue={120}
                   />
                 </div>
               )}
