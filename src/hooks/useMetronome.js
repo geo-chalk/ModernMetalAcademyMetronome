@@ -1,6 +1,15 @@
 import { useState, useRef, useEffect } from 'react';
 import * as Tone from 'tone';
 
+// Define custom accent patterns here
+const ACCENT_MAP = {
+  "7/8": [1, 4, 6],
+  "5/8": [1, 4],
+  "6/8": [1, 4],
+  "9/8": [1, 4, 7],
+  "12/8": [1, 4, 7, 10],
+};
+
 export const useMetronome = (initialBpm) => {
   const [bpm, setBpm] = useState(initialBpm);
   const [isActive, setIsActive] = useState(false);
@@ -13,43 +22,34 @@ export const useMetronome = (initialBpm) => {
   const clickSynth = useRef(null);
   const progressIntervalRef = useRef(null);
   const totalIntervalRef = useRef(null);
-  const countdownTimeoutRef = useRef(null); // Ref to track the countdown timeout
+  const countdownTimeoutRef = useRef(null);
   const startTimeRef = useRef(0);
 
-  // Keep Tone.js BPM in sync with React state
   useEffect(() => {
     Tone.getTransport().bpm.value = bpm;
   }, [bpm]);
 
-  // Keep Tone.js Volume in sync
   useEffect(() => {
     Tone.getDestination().volume.value = volume;
   }, [volume]);
 
   const stop = () => {
-    // 1. Stop Audio
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
-
-    // 2. Clear all Timers/Intervals
     if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
     if (totalIntervalRef.current) clearInterval(totalIntervalRef.current);
     if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
-
-    // 3. Reset State
     setIsActive(false);
     setCurrentBeat(1);
     setStepProgress(0);
     setTotalProgress(0);
   };
 
-  const start = async (settings, startBpm) => {
+const start = async (settings, startBpm) => {
     await Tone.start();
-
-    // Reset everything before starting
     stop();
 
-    Tone.getTransport().timeSignature = settings.timeSigTop;
+    Tone.getTransport().timeSignature = 4; // Keep internal transport stable
     setBeatsPerMeasure(settings.timeSigTop);
     setBpm(startBpm);
 
@@ -58,38 +58,46 @@ export const useMetronome = (initialBpm) => {
       envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 }
     }).toDestination();
 
-    // Schedule the main metronome loop
-    Tone.getTransport().scheduleRepeat((time) => {
-      const position = Tone.getTransport().position.split(':');
-      const beat = parseInt(position[1]);
-      const freq = beat === 0 ? 1500 : 800;
+    const subdivision = `${settings.timeSigBottom}n`;
+    const sigKey = `${settings.timeSigTop}/${settings.timeSigBottom}`;
+    let beatCounter = 0;
 
+    Tone.getTransport().scheduleRepeat((time) => {
+      const displayBeat = (beatCounter % settings.timeSigTop) + 1; // 1-indexed
+
+      // Determine if current beat should be accented based on the map
+      const accents = ACCENT_MAP[sigKey] || [1];
+      const isAccented = accents.includes(displayBeat);
+
+      const freq = isAccented ? 1500 : 800;
       clickSynth.current.triggerAttackRelease(freq, "32n", time);
 
       Tone.Draw.schedule(() => {
-        setCurrentBeat(beat + 1);
+        setCurrentBeat(displayBeat);
       }, time);
-    }, "4n");
+
+      beatCounter++;
+    }, subdivision);
 
     setIsActive(true);
 
-    const secondsPerBeat = 60 / startBpm;
+    const beatDuration = Tone.Time(subdivision).toSeconds();
     const now = Tone.now();
     const totalCountdownBeats = settings.timeSigTop * settings.countdownBars;
 
-    // Play Countdown Clicks
+    // Countdown logic also uses manual top/bottom values
     for (let i = 0; i < totalCountdownBeats; i++) {
-      const clickTime = now + (i * secondsPerBeat);
+      const clickTime = now + (i * beatDuration);
       const isStartOfBar = i % settings.timeSigTop === 0;
       const freq = isStartOfBar ? 1800 : 1200;
       clickSynth.current.triggerAttackRelease(freq, "32n", clickTime);
     }
 
-    const countdownDurationSeconds = totalCountdownBeats * secondsPerBeat;
+    const countdownDurationSeconds = totalCountdownBeats * beatDuration;
     Tone.getTransport().start(`+${countdownDurationSeconds}`);
 
-    // Start UI logic exactly when countdown finishes
     countdownTimeoutRef.current = setTimeout(() => {
+      if (Tone.getTransport().state !== "started") return;
       startTimeRef.current = Date.now();
 
       if (settings.mode === 'trainer') {
@@ -98,11 +106,10 @@ export const useMetronome = (initialBpm) => {
         let stepStartTime = Date.now();
 
         progressIntervalRef.current = setInterval(() => {
-          const now = Date.now();
-          const elapsedInStep = now - stepStartTime;
-
+          const nowMs = Date.now();
+          const elapsedInStep = nowMs - stepStartTime;
           if (elapsedInStep >= stepMs) {
-            stepStartTime = now; // Reset step anchor
+            stepStartTime = nowMs;
             setStepProgress(0);
             setBpm(prev => prev + settings.increment);
           } else {
@@ -113,12 +120,8 @@ export const useMetronome = (initialBpm) => {
         totalIntervalRef.current = setInterval(() => {
           const elapsedTotal = Date.now() - startTimeRef.current;
           const progressTotal = (elapsedTotal / totalMs) * 100;
-
-          if (progressTotal >= 100) {
-            stop();
-          } else {
-            setTotalProgress(progressTotal);
-          }
+          if (progressTotal >= 100) stop();
+          else setTotalProgress(progressTotal);
         }, 100);
       }
     }, countdownDurationSeconds * 1000);

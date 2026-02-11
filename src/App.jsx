@@ -34,11 +34,15 @@ export default function App() {
     const handleStart = useCallback(() => {
       const startTempo = mode === 'trainer' ? trainerStartBpm : constantBpm;
       start({
-        mode, increment, stepSeconds, totalSeconds,
-        timeSigTop, timeSigBottom, countdownBars
+        mode,
+        increment,
+        stepSeconds,
+        totalSeconds,
+        timeSigTop,
+        timeSigBottom, // Ensure this is being passed
+        countdownBars
       }, startTempo);
     }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start]);
-
   const handleStop = useCallback(() => {
     if (mode === 'constant') setConstantBpm(bpm);
     stop();
