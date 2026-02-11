@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import * as Tone from 'tone';
 
-// Define custom accent patterns here
 const ACCENT_MAP = {
   "7/8": [1, 4, 6],
   "5/8": [1, 4],
@@ -20,36 +19,80 @@ export const useMetronome = (initialBpm) => {
   const [volume, setVolume] = useState(-6);
 
   const clickSynth = useRef(null);
-  const progressIntervalRef = useRef(null);
-  const totalIntervalRef = useRef(null);
-  const countdownTimeoutRef = useRef(null);
-  const startTimeRef = useRef(0);
+  const requestRef = useRef(null);
+  const sessionStartTimeRef = useRef(null);
+  const stepStartTimeRef = useRef(null);
+  const settingsRef = useRef(null);
 
+  // Sync Tone.js BPM
   useEffect(() => {
     Tone.getTransport().bpm.value = bpm;
   }, [bpm]);
 
+  // Sync Tone.js Volume
   useEffect(() => {
     Tone.getDestination().volume.value = volume;
   }, [volume]);
 
+  // Main animation loop for progress bars
+  const animate = () => {
+    if (!sessionStartTimeRef.current || !settingsRef.current) {
+      requestRef.current = requestAnimationFrame(animate);
+      return;
+    }
+
+    const now = Date.now();
+    const settings = settingsRef.current;
+
+    // Only update progress if the countdown is finished
+    if (now >= sessionStartTimeRef.current && settings.mode === 'trainer') {
+      // 1. Total Progress
+      const totalMs = settings.totalSeconds * 1000;
+      const elapsedTotal = now - sessionStartTimeRef.current;
+      const newTotalProgress = Math.min((elapsedTotal / totalMs) * 100, 100);
+      setTotalProgress(newTotalProgress);
+
+      if (newTotalProgress >= 100) {
+        stop();
+        return;
+      }
+
+      // 2. Cycle (Step) Progress
+      const stepMs = settings.stepSeconds * 1000;
+      const elapsedInStep = now - stepStartTimeRef.current;
+
+      if (elapsedInStep >= stepMs) {
+        stepStartTimeRef.current = now;
+        setStepProgress(0);
+        setBpm(prev => prev + settings.increment);
+      } else {
+        setStepProgress((elapsedInStep / stepMs) * 100);
+      }
+    }
+
+    requestRef.current = requestAnimationFrame(animate);
+  };
+
   const stop = () => {
     Tone.getTransport().stop();
     Tone.getTransport().cancel();
-    if (progressIntervalRef.current) clearInterval(progressIntervalRef.current);
-    if (totalIntervalRef.current) clearInterval(totalIntervalRef.current);
-    if (countdownTimeoutRef.current) clearTimeout(countdownTimeoutRef.current);
+    cancelAnimationFrame(requestRef.current);
+
+    sessionStartTimeRef.current = null;
+    stepStartTimeRef.current = null;
+    settingsRef.current = null;
+
     setIsActive(false);
     setCurrentBeat(1);
     setStepProgress(0);
     setTotalProgress(0);
   };
 
-const start = async (settings, startBpm) => {
+  const start = async (settings, startBpm) => {
     await Tone.start();
-    stop();
+    stop(); // Ensure clean state
 
-    Tone.getTransport().timeSignature = 4; // Keep internal transport stable
+    settingsRef.current = settings;
     setBeatsPerMeasure(settings.timeSigTop);
     setBpm(startBpm);
 
@@ -62,69 +105,40 @@ const start = async (settings, startBpm) => {
     const sigKey = `${settings.timeSigTop}/${settings.timeSigBottom}`;
     let beatCounter = 0;
 
+    // Metronome Repeat
     Tone.getTransport().scheduleRepeat((time) => {
-      const displayBeat = (beatCounter % settings.timeSigTop) + 1; // 1-indexed
-
-      // Determine if current beat should be accented based on the map
+      const displayBeat = (beatCounter % settings.timeSigTop) + 1;
       const accents = ACCENT_MAP[sigKey] || [1];
       const isAccented = accents.includes(displayBeat);
-
       const freq = isAccented ? 1500 : 800;
+
       clickSynth.current.triggerAttackRelease(freq, "32n", time);
-
-      Tone.Draw.schedule(() => {
-        setCurrentBeat(displayBeat);
-      }, time);
-
+      Tone.Draw.schedule(() => setCurrentBeat(displayBeat), time);
       beatCounter++;
     }, subdivision);
 
-    setIsActive(true);
-
+    // Calculate countdown timing
     const beatDuration = Tone.Time(subdivision).toSeconds();
-    const now = Tone.now();
     const totalCountdownBeats = settings.timeSigTop * settings.countdownBars;
+    const countdownDurationMs = totalCountdownBeats * beatDuration * 1000;
 
-    // Countdown logic also uses manual top/bottom values
+    // Play countdown clicks
+    const nowTone = Tone.now();
     for (let i = 0; i < totalCountdownBeats; i++) {
-      const clickTime = now + (i * beatDuration);
+      const clickTime = nowTone + (i * beatDuration);
       const isStartOfBar = i % settings.timeSigTop === 0;
-      const freq = isStartOfBar ? 1800 : 1200;
-      clickSynth.current.triggerAttackRelease(freq, "32n", clickTime);
+      clickSynth.current.triggerAttackRelease(isStartOfBar ? 1800 : 1200, "32n", clickTime);
     }
 
-    const countdownDurationSeconds = totalCountdownBeats * beatDuration;
-    Tone.getTransport().start(`+${countdownDurationSeconds}`);
+    // Schedule actual start
+    Tone.getTransport().start(`+${totalCountdownBeats * beatDuration}`);
 
-    countdownTimeoutRef.current = setTimeout(() => {
-      if (Tone.getTransport().state !== "started") return;
-      startTimeRef.current = Date.now();
+    // Set anchor times for the animation loop
+    sessionStartTimeRef.current = Date.now() + countdownDurationMs;
+    stepStartTimeRef.current = sessionStartTimeRef.current;
 
-      if (settings.mode === 'trainer') {
-        const stepMs = settings.stepSeconds * 1000;
-        const totalMs = settings.totalSeconds * 1000;
-        let stepStartTime = Date.now();
-
-        progressIntervalRef.current = setInterval(() => {
-          const nowMs = Date.now();
-          const elapsedInStep = nowMs - stepStartTime;
-          if (elapsedInStep >= stepMs) {
-            stepStartTime = nowMs;
-            setStepProgress(0);
-            setBpm(prev => prev + settings.increment);
-          } else {
-            setStepProgress((elapsedInStep / stepMs) * 100);
-          }
-        }, 32);
-
-        totalIntervalRef.current = setInterval(() => {
-          const elapsedTotal = Date.now() - startTimeRef.current;
-          const progressTotal = (elapsedTotal / totalMs) * 100;
-          if (progressTotal >= 100) stop();
-          else setTotalProgress(progressTotal);
-        }, 100);
-      }
-    }, countdownDurationSeconds * 1000);
+    setIsActive(true);
+    requestRef.current = requestAnimationFrame(animate);
   };
 
   return { bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, start, stop, beatsPerMeasure, volume, setVolume };
