@@ -12,7 +12,7 @@ const VolumeSlider = ({ volume, setVolume }) => {
         step="1"
         value={volume}
         onChange={(e) => setVolume(Number(e.target.value))}
-        className="flex-1 h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#FF5500]"
+        className="flex-1 h-1 bg-white/10 rounded-full appearance-none cursor-pointer accent-[#FF820C]"
       />
     </div>
   );

@@ -11,7 +11,7 @@ const TempoSlider = ({ label, value, setter, min, max, unit, defaultValue }) => 
         <span className="text-[11px] font-black text-white/40 uppercase tracking-[0.25em]">
           {label}
         </span>
-        <span className="text-[#FF5500] font-mono text-xl font-bold">
+        <span className="text-[#FF820C] font-mono text-xl font-bold">
           {value}<span className="text-white/20 text-xs ml-1 font-normal uppercase">{unit}</span>
         </span>
       </div>
@@ -56,7 +56,7 @@ const TempoSlider = ({ label, value, setter, min, max, unit, defaultValue }) => 
           max={max}
           value={value}
           onChange={(e) => setter(Number(e.target.value))}
-          className="absolute inset-0 w-full h-full bg-transparent appearance-none cursor-pointer accent-[#FF5500] z-10"
+          className="absolute inset-0 w-full h-full bg-transparent appearance-none cursor-pointer accent-[#FF820C] z-10"
         />
       </div>
     </section>

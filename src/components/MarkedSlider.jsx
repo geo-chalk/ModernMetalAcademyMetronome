@@ -37,7 +37,7 @@ const k2dStack = { fontFamily: "'K2D', sans-serif" };
           step={step}
           value={value}
           onChange={(e) => setter(Number(e.target.value))}
-          className="w-full h-1 bg-black rounded-md appearance-none cursor-pointer accent-[#FF5500] relative z-10"
+          className="w-full h-1 bg-black rounded-md appearance-none cursor-pointer accent-[#FF820C] relative z-10"
           style={{ background: 'rgba(255,255,255,0.1)' }}
         />
       </div>
