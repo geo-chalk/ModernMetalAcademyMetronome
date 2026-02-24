@@ -21,7 +21,7 @@ const TimeSignatureSelector = ({ top, bottom, setTop, setBottom, isActive }) => 
               <option key={num} value={num} className="bg-[#1E1E1E]">{num}</option>
             ))}
           </select>
-          <ChevronDown size={12} className="absolute right-0 text-[#FF5500] opacity-50 group-hover:opacity-100 pointer-events-none" />
+          <ChevronDown size={12} className="absolute right-0 text-[#FF820C] opacity-50 group-hover:opacity-100 pointer-events-none" />
         </div>
 
         <div className="w-10 h-[1px] bg-white/20 my-1" />

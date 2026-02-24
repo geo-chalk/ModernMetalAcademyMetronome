@@ -14,12 +14,12 @@ const ModeSelector = ({ mode, setMode, onStop }) => {
         onClick={() => handleModeChange("trainer")}
         /* 1. Changed rounded-lg to rounded-md
            2. Changed font-bold to font-black for a more aggressive look
-           3. Active state: Changed bg-blue-600 to bg-[#FF5500]
+           3. Active state: Changed bg-blue-600 to bg-[#FF820C]
            4. Inactive state: Changed text-gray-500 to text-white/40
         */
         className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-black uppercase tracking-widest transition-all ${
           mode === "trainer"
-            ? "bg-[#FF5500] text-white"
+            ? "bg-[#FF820C] text-white"
             : "text-white/40 hover:text-white"
         }`}
       >
@@ -29,7 +29,7 @@ const ModeSelector = ({ mode, setMode, onStop }) => {
         onClick={() => handleModeChange("constant")}
         className={`flex-1 flex items-center justify-center gap-2 py-2 rounded-md text-xs font-black uppercase tracking-widest transition-all ${
           mode === "constant"
-            ? "bg-[#FF5500] text-white"
+            ? "bg-[#FF820C] text-white"
             : "text-white/40 hover:text-white"
         }`}
       >

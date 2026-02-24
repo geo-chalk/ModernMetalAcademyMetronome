@@ -6,7 +6,7 @@ const PlayButton = ({ isActive, onClick }) => {
     <button
       onClick={onClick}
       className={`w-full py-4 rounded-xl flex items-center justify-center gap-3 font-bold uppercase tracking-[0.2em] transition-all duration-200
-        ${isActive ? 'bg-[#CC0000]' : 'bg-[#FF5500]'}
+        ${isActive ? 'bg-[#CC0000]' : 'bg-[#FF820C]'}
         text-white active:scale-[0.97]`}
     >
       {isActive ? (
