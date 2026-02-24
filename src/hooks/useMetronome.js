@@ -24,6 +24,20 @@ export const useMetronome = (initialBpm) => {
   const stepStartTimeRef = useRef(null);
   const settingsRef = useRef(null);
 
+  // 1. Initialize Synth once and cleanup residuals on unmount
+  useEffect(() => {
+    clickSynth.current = new Tone.Synth({
+      oscillator: { type: "square" },
+      envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 }
+    }).toDestination();
+
+    return () => {
+      if (clickSynth.current) {
+        clickSynth.current.dispose();
+      }
+    };
+  }, []);
+
   // Sync Tone.js BPM
   useEffect(() => {
     Tone.getTransport().bpm.value = bpm;
@@ -74,8 +88,15 @@ export const useMetronome = (initialBpm) => {
   };
 
   const stop = () => {
+    // Stop and clear all scheduled audio events
     Tone.getTransport().stop();
-    Tone.getTransport().cancel();
+    Tone.getTransport().cancel(0);
+
+    // 3. Kill any hanging notes immediately
+    if (clickSynth.current) {
+      clickSynth.current.triggerRelease();
+    }
+
     cancelAnimationFrame(requestRef.current);
 
     sessionStartTimeRef.current = null;
@@ -90,16 +111,11 @@ export const useMetronome = (initialBpm) => {
 
   const start = async (settings, startBpm) => {
     await Tone.start();
-    stop(); // Ensure clean state
+    stop(); // Ensure clean state before starting
 
     settingsRef.current = settings;
     setBeatsPerMeasure(settings.timeSigTop);
     setBpm(startBpm);
-
-    clickSynth.current = new Tone.Synth({
-      oscillator: { type: "square" },
-      envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 }
-    }).toDestination();
 
     const subdivision = `${settings.timeSigBottom}n`;
     const sigKey = `${settings.timeSigTop}/${settings.timeSigBottom}`;
