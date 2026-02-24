@@ -128,7 +128,11 @@ export default function App() {
 
               {mode === 'trainer' && (
                 <div className="mt-2 pt-4 border-t border-white/5 flex flex-col gap-1">
-                  <MarkedSlider label="Increment" value={increment} setter={setIncrement} min={1} max={10} unit="bpm" defaultValue={2} />
+                  <MarkedSlider
+                    label="Increment" value={increment} setter={setIncrement}
+                    min={1} max={10} unit="bpm"
+                    defaultValue={2}
+                  />
                   <MarkedSlider
                     label="Interval" value={stepSeconds} setter={setStepSeconds}
                     min={5} max={90} step={5}

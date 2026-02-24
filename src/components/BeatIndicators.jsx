@@ -10,7 +10,7 @@ const BeatIndicators = memo(({ isActive, currentBeat, beatsPerMeasure }) => {
           key={b}
           className={`h-4 w-full rounded-md transition-all duration-75 ease-out ${
             isActive && currentBeat === b
-              ? b === 1 ? 'bg-white scale-y-110 shadow-[0_0_15px_rgba(255,255,255,0.5)]' : 'bg-[#FF5500] scale-y-105'
+              ? b === 1 ? 'bg-white scale-y-110 shadow-[0_0_15px_rgba(255,255,255,0.5)]' : 'bg-[#FF820C] scale-y-105'
               : 'bg-gray-800 scale-y-100'
           }`}
         />

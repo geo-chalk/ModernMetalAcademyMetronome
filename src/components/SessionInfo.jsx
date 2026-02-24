@@ -17,12 +17,12 @@ const SessionInfo = ({ startBpm, endBpm, mode }) => {
         </div>
       </div>
 
-      <div className="bg-[#FF5500]/[0.02] p-4 border border-[#FF5500]/10">
-        <div className="flex items-center gap-2 mb-2 text-[10px] font-black uppercase tracking-widest text-[#FF5500]/40">
+      <div className="bg-[#FF820C]/[0.02] p-4 border border-[#FF820C]/10">
+        <div className="flex items-center gap-2 mb-2 text-[10px] font-black uppercase tracking-widest text-[#FF820C]/40">
           <Target size={10} />
           <span>Ceiling</span>
         </div>
-        <div className="font-mono text-xl text-[#FF5500]">
+        <div className="font-mono text-xl text-[#FF820C]">
           {endBpm}
           <span className="text-[10px] ml-1 opacity-30">BPM</span>
         </div>
