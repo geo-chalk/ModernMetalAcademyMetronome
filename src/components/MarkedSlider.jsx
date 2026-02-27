@@ -12,7 +12,7 @@ const k2dStack = { fontFamily: "'K2D', sans-serif" };
     <section className="py-2 select-none">
         <div className="flex justify-between items-center mb-3 text-white/40 tracking-wider">
           <span
-            className="text-[14px] font-bold uppercase"
+            className="text-[14px] font-bold"
             style={k2dStack}
           >
             {label}
