@@ -118,6 +118,8 @@ export const useMetronome = (initialBpm) => {
     await Tone.start();
     stop(); // Ensure a clean slate
 
+    Tone.getTransport().bpm.value = startBpm;
+
     settingsRef.current = settings;
     setBeatsPerMeasure(settings.timeSigTop);
     setBpm(startBpm);
