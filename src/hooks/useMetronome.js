@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import * as Tone from 'tone';
 
+// Defines which beats receive a higher pitch based on complex time signatures
 const ACCENT_MAP = {
   "7/8": [1, 4, 6],
   "5/8": [1, 4],
@@ -24,31 +25,35 @@ export const useMetronome = (initialBpm) => {
   const stepStartTimeRef = useRef(null);
   const settingsRef = useRef(null);
 
-  // 1. Initialize Synth once and cleanup residuals on unmount
+  // Initialize the synth with a 'right-skewed' feel.
+  // Triangle waves and ultra-fast attack ensure the sound 'peaks'
+  // exactly when the visual indicator triggers.
   useEffect(() => {
     clickSynth.current = new Tone.Synth({
-      oscillator: { type: "square" },
-      envelope: { attack: 0.001, decay: 0.05, sustain: 0, release: 0.05 }
+      oscillator: { type: "triangle" },
+      envelope: {
+        attack: 0.002, // 2ms attack eliminates 'pop' but feels instant
+        decay: 0.08,
+        sustain: 0,
+        release: 0.08
+      }
     }).toDestination();
 
     return () => {
-      if (clickSynth.current) {
-        clickSynth.current.dispose();
-      }
+      if (clickSynth.current) clickSynth.current.dispose();
     };
   }, []);
 
-  // Sync Tone.js BPM
+  // Sync state changes to the Tone.js Transport global clock
   useEffect(() => {
     Tone.getTransport().bpm.value = bpm;
   }, [bpm]);
 
-  // Sync Tone.js Volume
   useEffect(() => {
     Tone.getDestination().volume.value = volume;
   }, [volume]);
 
-  // Main animation loop for progress bars
+  // Handle progress bars and Speed Trainer logic
   const animate = () => {
     if (!sessionStartTimeRef.current || !settingsRef.current) {
       requestRef.current = requestAnimationFrame(animate);
@@ -58,9 +63,9 @@ export const useMetronome = (initialBpm) => {
     const now = Date.now();
     const settings = settingsRef.current;
 
-    // Only update progress if the countdown is finished
+    // Logic only runs if the 'trainer' mode is active and countdown is over
     if (now >= sessionStartTimeRef.current && settings.mode === 'trainer') {
-      // 1. Total Progress
+      // Calculate overall session completion
       const totalMs = settings.totalSeconds * 1000;
       const elapsedTotal = now - sessionStartTimeRef.current;
       const newTotalProgress = Math.min((elapsedTotal / totalMs) * 100, 100);
@@ -71,11 +76,12 @@ export const useMetronome = (initialBpm) => {
         return;
       }
 
-      // 2. Cycle (Step) Progress
+      // Calculate progress within the current BPM 'step'
       const stepMs = settings.stepSeconds * 1000;
       const elapsedInStep = now - stepStartTimeRef.current;
 
       if (elapsedInStep >= stepMs) {
+        // Step complete: reset step timer and increment BPM
         stepStartTimeRef.current = now;
         setStepProgress(0);
         setBpm(prev => prev + settings.increment);
@@ -83,26 +89,24 @@ export const useMetronome = (initialBpm) => {
         setStepProgress((elapsedInStep / stepMs) * 100);
       }
     }
-
     requestRef.current = requestAnimationFrame(animate);
   };
 
   const stop = () => {
-    // Stop and clear all scheduled audio events
+    // Crucial: Stop and clear the schedule, then reset 'seconds' to 0
+    // to ensure the next 'start' begins exactly on Beat 1.
     Tone.getTransport().stop();
     Tone.getTransport().cancel(0);
+    Tone.getTransport().seconds = 0;
 
-    // 3. Kill any hanging notes immediately
     if (clickSynth.current) {
       clickSynth.current.triggerRelease();
     }
 
     cancelAnimationFrame(requestRef.current);
-
     sessionStartTimeRef.current = null;
     stepStartTimeRef.current = null;
     settingsRef.current = null;
-
     setIsActive(false);
     setCurrentBeat(1);
     setStepProgress(0);
@@ -110,8 +114,9 @@ export const useMetronome = (initialBpm) => {
   };
 
   const start = async (settings, startBpm) => {
+    // Browsers require a user gesture to start the AudioContext
     await Tone.start();
-    stop(); // Ensure clean state before starting
+    stop(); // Ensure a clean slate
 
     settingsRef.current = settings;
     setBeatsPerMeasure(settings.timeSigTop);
@@ -119,21 +124,27 @@ export const useMetronome = (initialBpm) => {
 
     const subdivision = `${settings.timeSigBottom}n`;
     const sigKey = `${settings.timeSigTop}/${settings.timeSigBottom}`;
+
+    // Counter initialized inside start() so it resets to 0 every session
     let beatCounter = 0;
 
-    // Metronome Repeat
+    // Main Audio Loop: Scheduled on the Transport for high-precision timing
     Tone.getTransport().scheduleRepeat((time) => {
       const displayBeat = (beatCounter % settings.timeSigTop) + 1;
       const accents = ACCENT_MAP[sigKey] || [1];
       const isAccented = accents.includes(displayBeat);
-      const freq = isAccented ? 1500 : 800;
+      const freq = isAccented ? 1000 : 500;
 
+      // Trigger audio precisely at the Transport's 'time'
       clickSynth.current.triggerAttackRelease(freq, "32n", time);
+
+      // Tone.Draw schedules visual updates to happen on the next
+      // animation frame relative to the audio time, keeping them in sync.
       Tone.Draw.schedule(() => setCurrentBeat(displayBeat), time);
       beatCounter++;
     }, subdivision);
 
-    // Calculate countdown timing
+    // Countdown Logic: manually schedule clicks for the initial bars
     const beatDuration = Tone.Time(subdivision).toSeconds();
     const totalCountdownBeats = settings.timeSigTop * settings.countdownBars;
     const countdownDurationMs = totalCountdownBeats * beatDuration * 1000;
@@ -143,13 +154,13 @@ export const useMetronome = (initialBpm) => {
     for (let i = 0; i < totalCountdownBeats; i++) {
       const clickTime = nowTone + (i * beatDuration);
       const isStartOfBar = i % settings.timeSigTop === 0;
-      clickSynth.current.triggerAttackRelease(isStartOfBar ? 1800 : 1200, "32n", clickTime);
+      clickSynth.current.triggerAttackRelease(isStartOfBar ? 1200 : 800, "32n", clickTime);
     }
 
-    // Schedule actual start
+    // Delay the start of the repeating transport until after the countdown
     Tone.getTransport().start(`+${totalCountdownBeats * beatDuration}`);
 
-    // Set anchor times for the animation loop
+    // Set anchors for the React progress animation
     sessionStartTimeRef.current = Date.now() + countdownDurationMs;
     stepStartTimeRef.current = sessionStartTimeRef.current;
 
