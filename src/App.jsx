@@ -13,6 +13,7 @@ import TimeSignatureSelector from './components/TimeSignatureSelector';
 import VolumeSlider from './components/VolumeSlider';
 import PlayButton from './components/PlayButton';
 import CountdownSelector from './components/CountdownSelector';
+import BpmRangeDisplay from './components/BpmRangeDisplay';
 
 export default function App() {
     const [mode, setMode] = useState('trainer');
@@ -147,6 +148,15 @@ export default function App() {
                                         min={30} max={600} step={30}
                                         displayValue={formatDuration(totalSeconds)}
                                         defaultValue={120}
+                                    />
+
+                                    {/* 2. Add the range display here */}
+                                    <BpmRangeDisplay
+                                        startBpm={trainerStartBpm}
+                                        increment={increment}
+                                        stepSeconds={stepSeconds}
+                                        totalSeconds={totalSeconds}
+                                        mode={mode}
                                     />
                                 </div>
                             )}
