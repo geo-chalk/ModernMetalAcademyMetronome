@@ -40,7 +40,7 @@ const TimeSignatureSelector = ({top, bottom, setTop, setBottom, isActive}) => {
                         ))}
                     </select>
                     <ChevronDown size={10}
-                                 className="absolute right-0 text-white/20 group-hover:text-white/40 pointer-events-none"/>
+                                 className="absolute right-0 text-[#FF820C] opacity-50 group-hover:text-white/40 pointer-events-none"/>
                 </div>
             </div>
         </div>
