@@ -16,8 +16,11 @@ const TrainerProgress = memo(({isActive, progress, totalProgress, mode}) => {
                 </div>
                 <div className="w-full bg-white/5 h-[2px] rounded-full overflow-hidden">
                     <div
-                        className="bg-[#FF820C] h-full transition-all duration-[32ms] linear"
-                        style={{width: `${isActive ? progress : 0}%`}}
+                        className="bg-[#FF820C] h-full"
+                        style={{
+                            width: `${isActive ? progress : 0}%`,
+                            willChange: 'width' // Optimization for smooth width changes
+                        }}
                     />
                 </div>
             </div>
@@ -31,8 +34,11 @@ const TrainerProgress = memo(({isActive, progress, totalProgress, mode}) => {
                 </div>
                 <div className="w-full bg-white/5 h-[2px] rounded-full overflow-hidden">
                     <div
-                        className="bg-white/40 h-full transition-all duration-[100ms] linear"
-                        style={{width: `${isActive ? totalProgress : 0}%`}}
+                        className="bg-white/40 h-full"
+                        style={{
+                            width: `${isActive ? totalProgress : 0}%`,
+                            willChange: 'width'
+                        }}
                     />
                 </div>
             </div>

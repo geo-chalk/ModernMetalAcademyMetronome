@@ -2,6 +2,10 @@ import React from "react";
 import {Activity, Target} from "lucide-react";
 
 const SessionInfo = ({startBpm, endBpm, mode}) => {
+    // If mode is "info", return null for now (blank)
+    if (mode === "info") return null;
+
+    // Hide component entirely if not in trainer mode
     if (mode !== "trainer") return null;
 
     return (
