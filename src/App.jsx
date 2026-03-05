@@ -14,6 +14,7 @@ import VolumeSlider from './components/VolumeSlider';
 import PlayButton from './components/PlayButton';
 import CountdownSelector from './components/CountdownSelector';
 import BpmRangeDisplay from './components/BpmRangeDisplay';
+import Info from './components/Info';
 
 export default function App() {
     const [mode, setMode] = useState('trainer');
@@ -24,7 +25,7 @@ export default function App() {
     const [totalSeconds, setTotalSeconds] = useState(120);
     const [timeSigTop, setTimeSigTop] = useState(4);
     const [timeSigBottom, setTimeSigBottom] = useState(4);
-    const [countdownBars, setCountdownBars] = useState(1); // Default to 1 bar
+    const [countdownBars, setCountdownBars] = useState(1);
 
     const {
         bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress,
@@ -44,6 +45,7 @@ export default function App() {
             countdownBars
         }, startTempo);
     }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start]);
+
     const handleStop = useCallback(() => {
         if (mode === 'constant') setConstantBpm(bpm);
         stop();
@@ -73,6 +75,8 @@ export default function App() {
         return m === 0 ? `${s}s` : s === 0 ? `${m}m` : `${m}m ${s}s`;
     };
 
+    const isInfoMode = mode === 'info';
+
     return (
         <div
             className="fixed inset-0 w-full h-[100svh] bg-black text-white flex items-center justify-center overflow-hidden touch-none p-2 sm:p-4">
@@ -82,95 +86,75 @@ export default function App() {
                 {/* Header */}
                 <div className="p-4 sm:p-6 pb-1 flex-none">
                     <ModeSelector mode={mode} setMode={setMode} onStop={handleStop}/>
-                    <VolumeSlider volume={volume} setVolume={setVolume}/>
+                    {!isInfoMode && <VolumeSlider volume={volume} setVolume={setVolume}/>}
                 </div>
 
                 {/* Main Content */}
                 <div className="px-4 sm:px-6 flex-1 overflow-y-auto no-scrollbar flex flex-col touch-pan-y">
-                    <div className="my-auto pt-0 pb-4 space-y-4">
+                    {!isInfoMode ? (
 
-                        {/* Optimized Layout Row */}
-                        <div className="flex items-center justify-between mb-0">
+                        <div className="my-auto pt-0 pb-4 space-y-4">
 
-                            {/* Left: Pre-roll */}
-                            <CountdownSelector
-                                value={countdownBars}
-                                setter={setCountdownBars}
-                                isActive={isActive}
-                            />
+                            {/* Optimized Layout Row */}
+                            <div className="flex items-center justify-between mb-0">
 
-                            {/* Center: BPM */}
-                            <div className="flex-1">
-                                <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive}/>
+                                {/* Left: Pre-roll */}
+                                <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
+
+                                {/* Center: BPM */}
+                                <div className="flex-1">
+                                    <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive}/>
+                                </div>
+
+                                {/* Right: Time Signature */}
+                                <TimeSignatureSelector top={timeSigTop} bottom={timeSigBottom} setTop={setTimeSigTop}
+                                                       setBottom={setTimeSigBottom} isActive={isActive}/>
                             </div>
 
-                            {/* Right: Time Signature */}
-                            <TimeSignatureSelector
-                                top={timeSigTop}
-                                bottom={timeSigBottom}
-                                setTop={setTimeSigTop}
-                                setBottom={setTimeSigBottom}
-                                isActive={isActive}
-                            />
+                            <BeatIndicators isActive={isActive} currentBeat={currentBeat}
+                                            beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}/>
+
+                            <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
+                                             mode={mode}/>
+
+                            <div className="flex flex-col gap-1">
+                                <MarkedSlider
+                                    label={mode === 'trainer' ? "Start BPM" : "Tempo"}
+                                    value={mode === 'trainer' ? trainerStartBpm : (isActive ? bpm : constantBpm)}
+                                    setter={displaySetter}
+                                    min={40} max={300} unit="bpm" defaultValue={120}
+                                />
+
+                                {mode === 'trainer' && (
+                                    <div className="mt-2 pt-4 border-t border-white/5 flex flex-col gap-1">
+                                        <MarkedSlider label="Increment" value={increment} setter={setIncrement} min={0}
+                                                      max={10} unit="bpm" defaultValue={2}/>
+                                        <MarkedSlider label="Interval" value={stepSeconds} setter={setStepSeconds}
+                                                      min={5} max={90} step={5}
+                                                      displayValue={formatDuration(stepSeconds)} defaultValue={10}/>
+                                        <MarkedSlider label="Duration" value={totalSeconds} setter={setTotalSeconds}
+                                                      min={30} max={600} step={30}
+                                                      displayValue={formatDuration(totalSeconds)} defaultValue={120}/>
+                                        <BpmRangeDisplay startBpm={trainerStartBpm} increment={increment}
+                                                         stepSeconds={stepSeconds} totalSeconds={totalSeconds}
+                                                         mode={mode}/>
+                                    </div>
+                                )}
+                            </div>
                         </div>
-
-                        <BeatIndicators
-                            isActive={isActive} currentBeat={currentBeat}
-                            beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}
-                        />
-
-                        <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
-                                         mode={mode}/>
-
-                        <div className="flex flex-col gap-1">
-                            <MarkedSlider
-                                label={mode === 'trainer' ? "Start BPM" : "Tempo"}
-                                value={mode === 'trainer' ? trainerStartBpm : (isActive ? bpm : constantBpm)}
-                                setter={displaySetter}
-                                min={40} max={300} unit="bpm" defaultValue={120}
-                            />
-
-                            {mode === 'trainer' && (
-                                <div className="mt-2 pt-4 border-t border-white/5 flex flex-col gap-1">
-                                    <MarkedSlider
-                                        label="Increment" value={increment} setter={setIncrement}
-                                        min={0} max={10} unit="bpm"
-                                        defaultValue={2}
-                                    />
-                                    <MarkedSlider
-                                        label="Interval" value={stepSeconds} setter={setStepSeconds}
-                                        min={5} max={90} step={5}
-                                        displayValue={formatDuration(stepSeconds)}
-                                        defaultValue={10}
-                                    />
-                                    <MarkedSlider
-                                        label="Duration" value={totalSeconds} setter={setTotalSeconds}
-                                        min={30} max={600} step={30}
-                                        displayValue={formatDuration(totalSeconds)}
-                                        defaultValue={120}
-                                    />
-
-                                    {/* 2. Add the range display here */}
-                                    <BpmRangeDisplay
-                                        startBpm={trainerStartBpm}
-                                        increment={increment}
-                                        stepSeconds={stepSeconds}
-                                        totalSeconds={totalSeconds}
-                                        mode={mode}
-                                    />
-                                </div>
-                            )}
+                    ) : (
+                        <div className="flex-1 flex items-center justify-center italic text-white/20 text-sm">
+                            <Info />
                         </div>
-                    </div>
+                    )}
                 </div>
 
-                {/* Footer */}
                 <div
                     className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E]">
-                    <PlayButton isActive={isActive} onClick={toggleMetronome}/>
+                    {!isInfoMode && <PlayButton isActive={isActive} onClick={toggleMetronome}/>}
                     <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase">
-            v{packageJson.version}
-          </span>
+                        v{packageJson.version}
+                    </span>
                 </div>
             </div>
         </div>

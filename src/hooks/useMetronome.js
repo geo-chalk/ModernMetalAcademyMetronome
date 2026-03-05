@@ -119,13 +119,13 @@ export const useMetronome = (initialBpm) => {
         stop(); // Ensure a clean slate
 
         Tone.getTransport().bpm.value = startBpm;
-
         settingsRef.current = settings;
         setBeatsPerMeasure(settings.timeSigTop);
         setBpm(startBpm);
 
         const subdivision = `${settings.timeSigBottom}n`;
         const sigKey = `${settings.timeSigTop}/${settings.timeSigBottom}`;
+        const accents = ACCENT_MAP[sigKey] || [1];
 
         // Counter initialized inside start() so it resets to 0 every session
         let beatCounter = 0;
@@ -133,7 +133,6 @@ export const useMetronome = (initialBpm) => {
         // Main Audio Loop: Scheduled on the Transport for high-precision timing
         Tone.getTransport().scheduleRepeat((time) => {
             const displayBeat = (beatCounter % settings.timeSigTop) + 1;
-            const accents = ACCENT_MAP[sigKey] || [1];
             const isAccented = accents.includes(displayBeat);
             const freq = isAccented ? 1000 : 500;
 
@@ -146,20 +145,15 @@ export const useMetronome = (initialBpm) => {
             beatCounter++;
         }, subdivision);
 
-        // Countdown Logic: manually schedule clicks for the initial bars
+        // --- 2. Corrected Countdown & Start Logic ---
         const beatDuration = Tone.Time(subdivision).toSeconds();
         const totalCountdownBeats = settings.timeSigTop * settings.countdownBars;
         const countdownDurationMs = totalCountdownBeats * beatDuration * 1000;
-
         const nowTone = Tone.now();
-        const accents = ACCENT_MAP[sigKey] || [1]; // Get accents for the current signature
 
-        // Play countdown clicks
+        // Play countdown clicks manually
         for (let i = 0; i < totalCountdownBeats; i++) {
             const clickTime = nowTone + (i * beatDuration);
-            // const isStartOfBar = i % settings.timeSigTop === 0;
-
-            // Calculate which beat of the measure we are on (1-indexed)
             const countdownBeat = (i % settings.timeSigTop) + 1;
             const isAccented = accents.includes(countdownBeat);
 
@@ -170,10 +164,16 @@ export const useMetronome = (initialBpm) => {
             clickSynth.current.triggerAttackRelease(freq, "32n", clickTime);
         }
 
-        // Delay the start of the repeating transport until after the countdown
-        Tone.getTransport().start(`+${totalCountdownBeats * beatDuration}`);
+        // CRITICAL FIX: Schedule a reset of the beatCounter to 0
+        // at the exact moment the Transport is scheduled to start.
+        const transportStartTime = totalCountdownBeats * beatDuration;
+        Tone.getTransport().scheduleOnce(() => {
+            beatCounter = 0;
+        }, transportStartTime);
 
-        // Set anchors for the React progress animation
+        // Start transport relative to 'now'
+        Tone.getTransport().start(`+${transportStartTime}`);
+
         sessionStartTimeRef.current = Date.now() + countdownDurationMs;
         stepStartTimeRef.current = sessionStartTimeRef.current;
 
