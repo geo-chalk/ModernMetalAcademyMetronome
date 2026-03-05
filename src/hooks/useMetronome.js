@@ -151,12 +151,23 @@ export const useMetronome = (initialBpm) => {
         const totalCountdownBeats = settings.timeSigTop * settings.countdownBars;
         const countdownDurationMs = totalCountdownBeats * beatDuration * 1000;
 
-        // Play countdown clicks
         const nowTone = Tone.now();
+        const accents = ACCENT_MAP[sigKey] || [1]; // Get accents for the current signature
+
+        // Play countdown clicks
         for (let i = 0; i < totalCountdownBeats; i++) {
             const clickTime = nowTone + (i * beatDuration);
-            const isStartOfBar = i % settings.timeSigTop === 0;
-            clickSynth.current.triggerAttackRelease(isStartOfBar ? 1200 : 800, "32n", clickTime);
+            // const isStartOfBar = i % settings.timeSigTop === 0;
+
+            // Calculate which beat of the measure we are on (1-indexed)
+            const countdownBeat = (i % settings.timeSigTop) + 1;
+            const isAccented = accents.includes(countdownBeat);
+
+            // Use slightly higher frequencies (1200/800) than the main loop
+            // to audibly distinguish the countdown phase.
+            const freq = isAccented ? 1200 : 800;
+
+            clickSynth.current.triggerAttackRelease(freq, "32n", clickTime);
         }
 
         // Delay the start of the repeating transport until after the countdown
