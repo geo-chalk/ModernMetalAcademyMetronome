@@ -15,6 +15,7 @@ import PlayButton from './components/PlayButton';
 import CountdownSelector from './components/CountdownSelector';
 import BpmRangeDisplay from './components/BpmRangeDisplay';
 import Info from './components/Info';
+import StartBPMSlider from './components/StartBPMSlider';
 
 export default function App() {
     const [mode, setMode] = useState('trainer');
@@ -118,7 +119,7 @@ export default function App() {
                                              mode={mode}/>
 
                             <div className="flex flex-col gap-1">
-                                <MarkedSlider
+                                <StartBPMSlider
                                     label={mode === 'trainer' ? "Start BPM" : "Tempo"}
                                     value={mode === 'trainer' ? trainerStartBpm : (isActive ? bpm : constantBpm)}
                                     setter={displaySetter}
