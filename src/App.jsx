@@ -16,6 +16,7 @@ import CountdownSelector from './components/CountdownSelector';
 import BpmRangeDisplay from './components/BpmRangeDisplay';
 import Info from './components/Info';
 import StartBPMSlider from './components/StartBPMSlider';
+import AccentSwitch from './components/AccentSwitch.jsx';
 
 export default function App() {
     const [mode, setMode] = useState('trainer');
@@ -30,7 +31,8 @@ export default function App() {
 
     const {
         bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress,
-        start, stop, beatsPerMeasure, volume, setVolume
+        start, stop, beatsPerMeasure, volume, setVolume,
+        isAccentEnabled, setIsAccentEnabled
     } = useMetronome(mode === 'trainer' ? trainerStartBpm : constantBpm);
 
     // Update handleStart to include countdownBars
@@ -87,9 +89,18 @@ export default function App() {
                 {/* Header */}
                 <div className="p-4 sm:p-6 pb-1 flex-none">
                     <ModeSelector mode={mode} setMode={setMode} onStop={handleStop}/>
-                    {!isInfoMode && <VolumeSlider volume={volume} setVolume={setVolume}/>}
+                    {!isInfoMode && (
+                        <div className="flex items-center justify-between mt-4 px-1">
+                            <div className="flex-1 max-w-[80%]">
+                                <VolumeSlider volume={volume} setVolume={setVolume}/>
+                            </div>
+                            <AccentSwitch
+                                isOn={isAccentEnabled}
+                                onToggle={() => setIsAccentEnabled(!isAccentEnabled)}
+                            />
+                        </div>
+                    )}
                 </div>
-
                 {/* Main Content */}
                 <div className="px-4 sm:px-6 flex-1 overflow-y-auto no-scrollbar flex flex-col touch-pan-y">
                     {!isInfoMode ? (
@@ -145,7 +156,7 @@ export default function App() {
                         </div>
                     ) : (
                         <div className="flex-1 flex items-center justify-center italic text-white/20 text-sm">
-                            <Info />
+                            <Info/>
                         </div>
                     )}
                 </div>
