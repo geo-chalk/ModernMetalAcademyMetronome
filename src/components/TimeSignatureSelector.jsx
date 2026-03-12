@@ -17,7 +17,7 @@ const TimeSignatureSelector = ({top, bottom, setTop, setBottom, isActive}) => {
                         disabled={isActive}
                         className="bg-transparent text-white text-3xl font-black focus:outline-none appearance-none cursor-pointer text-center z-10 pr-4 leading-none"
                     >
-                        {[2, 3, 4, 5, 6, 7, 8, 9, 12].map(num => (
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 12].map(num => (
                             <option key={num} value={num} className="bg-[#1E1E1E]">{num}</option>
                         ))}
                     </select>
@@ -40,7 +40,7 @@ const TimeSignatureSelector = ({top, bottom, setTop, setBottom, isActive}) => {
                         ))}
                     </select>
                     <ChevronDown size={10}
-                                 className="absolute right-0 text-[#FF820C] opacity-50 group-hover:text-white/40 pointer-events-none"/>
+                                 className="absolute right-0 text-[#FF820C] opacity-50 group-hover:opacity-100 pointer-events-none"/>
                 </div>
             </div>
         </div>
