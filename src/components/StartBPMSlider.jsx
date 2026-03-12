@@ -51,6 +51,15 @@ const StartBPMSlider = ({ value, setter, min, max, defaultValue }) => {
                     >
                         +5
                     </button>
+
+                    {/* Increment Button */}
+                    <button
+                        onClick={() => quickJump(20)}
+                        className="text-[12px] font-black bg-white/5 hover:bg-white/10 border border-white/5 px-2 py-1 rounded transition-colors active:scale-95 text-white/100"
+                        style={k2dStack}
+                    >
+                        +20
+                    </button>
                 </div>
             </div>
 
