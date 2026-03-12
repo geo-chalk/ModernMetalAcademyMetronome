@@ -18,12 +18,22 @@ export const useMetronome = (initialBpm) => {
     const [totalProgress, setTotalProgress] = useState(0);
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
     const [volume, setVolume] = useState(() => {
-        const saved = localStorage.getItem('metronome_volume');
-        return saved !== null ? Number(saved) : -6;
+        try {
+            const saved = localStorage.getItem('metronome_volume');
+            // If it's a valid number, return it, otherwise default to -6
+            return saved !== null && !isNaN(saved) ? Number(saved) : -6;
+        } catch (e) {
+            return -6;
+        }
     });
+
     const [isAccentEnabled, setIsAccentEnabled] = useState(() => {
-        const saved = localStorage.getItem('metronome_accents');
-        return saved !== null ? JSON.parse(saved) : true;
+        try {
+            const saved = localStorage.getItem('metronome_accents');
+            return saved !== null ? JSON.parse(saved) : true;
+        } catch (e) {
+            return true;
+        }
     });
 
     const clickSynth = useRef(null);
@@ -52,16 +62,29 @@ export const useMetronome = (initialBpm) => {
         };
     }, []);
 
+
     // Sync state changes to the Tone.js Transport global clock
     useEffect(() => {
         Tone.getTransport().bpm.value = bpm;
     }, [bpm]);
 
+    // 2. FORCE SYNC: Ensure Tone.js matches the loaded volume immediately on mount
     useEffect(() => {
-        localStorage.setItem('metronome_volume', volume.toString());
-    }, [volume]);
+        Tone.getDestination().volume.value = volume;
+    }, []); // Run once on mount
 
     useEffect(() => {
+        localStorage.setItem('metronome_volume', volume.toString());
+        // Sync the actual audio engine volume in real-time
+        Tone.getDestination().volume.value = volume;
+    }, [volume]);
+
+    // Add this next to your other useEffects
+    useEffect(() => {
+        // This syncs the Ref so the audio loop can see the change immediately
+        isAccentEnabledRef.current = isAccentEnabled;
+
+        // This handles the local storage persistence you already have
         localStorage.setItem('metronome_accents', JSON.stringify(isAccentEnabled));
     }, [isAccentEnabled]);
 
