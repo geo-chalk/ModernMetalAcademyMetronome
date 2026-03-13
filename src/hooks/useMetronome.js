@@ -17,13 +17,31 @@ export const useMetronome = (initialBpm) => {
     const [stepProgress, setStepProgress] = useState(0);
     const [totalProgress, setTotalProgress] = useState(0);
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
-    const [volume, setVolume] = useState(-6);
+    const [volume, setVolume] = useState(() => {
+        try {
+            const saved = localStorage.getItem('metronome_volume');
+            // If it's a valid number, return it, otherwise default to -6
+            return saved !== null && !isNaN(saved) ? Number(saved) : -6;
+        } catch (e) {
+            return -6;
+        }
+    });
+
+    const [isAccentEnabled, setIsAccentEnabled] = useState(() => {
+        try {
+            const saved = localStorage.getItem('metronome_accents');
+            return saved !== null ? JSON.parse(saved) : true;
+        } catch (e) {
+            return true;
+        }
+    });
 
     const clickSynth = useRef(null);
     const requestRef = useRef(null);
     const sessionStartTimeRef = useRef(null);
     const stepStartTimeRef = useRef(null);
     const settingsRef = useRef(null);
+    const isAccentEnabledRef = useRef(isAccentEnabled);
 
     // Initialize the synth with a 'right-skewed' feel.
     // Triangle waves and ultra-fast attack ensure the sound 'peaks'
@@ -44,14 +62,31 @@ export const useMetronome = (initialBpm) => {
         };
     }, []);
 
+
     // Sync state changes to the Tone.js Transport global clock
     useEffect(() => {
         Tone.getTransport().bpm.value = bpm;
     }, [bpm]);
 
+    // 2. FORCE SYNC: Ensure Tone.js matches the loaded volume immediately on mount
     useEffect(() => {
         Tone.getDestination().volume.value = volume;
+    }, []); // Run once on mount
+
+    useEffect(() => {
+        localStorage.setItem('metronome_volume', volume.toString());
+        // Sync the actual audio engine volume in real-time
+        Tone.getDestination().volume.value = volume;
     }, [volume]);
+
+    // Add this next to your other useEffects
+    useEffect(() => {
+        // This syncs the Ref so the audio loop can see the change immediately
+        isAccentEnabledRef.current = isAccentEnabled;
+
+        // This handles the local storage persistence you already have
+        localStorage.setItem('metronome_accents', JSON.stringify(isAccentEnabled));
+    }, [isAccentEnabled]);
 
     // Handle progress bars and Speed Trainer logic
     const animate = () => {
@@ -134,7 +169,9 @@ export const useMetronome = (initialBpm) => {
         Tone.getTransport().scheduleRepeat((time) => {
             const displayBeat = (beatCounter % settings.timeSigTop) + 1;
             const isAccented = accents.includes(displayBeat);
-            const freq = isAccented ? 1000 : 500;
+
+            // If accents are disabled, every beat uses the standard 500Hz frequency
+            const freq = (isAccentEnabledRef.current && isAccented) ? 1000 : 500;
 
             // Trigger audio precisely at the Transport's 'time'
             clickSynth.current.triggerAttackRelease(freq, "32n", time);
@@ -159,7 +196,7 @@ export const useMetronome = (initialBpm) => {
 
             // Use slightly higher frequencies (1200/800) than the main loop
             // to audibly distinguish the countdown phase.
-            const freq = isAccented ? 1200 : 800;
+            const freq = (isAccentEnabledRef.current && isAccented) ? 1200 : 800;
 
             clickSynth.current.triggerAttackRelease(freq, "32n", clickTime);
         }
@@ -192,6 +229,8 @@ export const useMetronome = (initialBpm) => {
         stop,
         beatsPerMeasure,
         volume,
-        setVolume
+        setVolume,
+        isAccentEnabled,
+        setIsAccentEnabled
     };
 };
