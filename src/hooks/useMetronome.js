@@ -1,6 +1,6 @@
 import {useState, useRef, useEffect} from 'react';
 import * as Tone from 'tone';
-import { useLocalStorage } from './useLocalStorage'; // Import your new hook
+import {useLocalStorage} from './useLocalStorage'; // Import your new hook
 
 // Defines which beats receive a higher pitch based on complex time signatures
 const ACCENT_MAP = {
@@ -63,6 +63,10 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     useEffect(() => {
         soundSettingsRef.current = initialSoundSettings;
     }, [initialSoundSettings]);
+
+    useEffect(() => {
+        isAccentEnabledRef.current = isAccentEnabled;
+    }, [isAccentEnabled]);
 
     // Handle progress bars and Speed Trainer logic
     const animate = () => {
