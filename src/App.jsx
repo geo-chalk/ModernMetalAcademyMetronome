@@ -25,14 +25,15 @@ import SoundConfig from './components/SoundConfig';
 export default function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [mode, setMode] = useLocalStorage('metronome_app_mode', 'trainer');
-    const [trainerStartBpm, setTrainerStartBpm] = useState(120);
-    const [constantBpm, setConstantBpm] = useState(120);
+    const [trainerStartBpm, setTrainerStartBpm] = useLocalStorage('trainer_start_bpm', 120);
+    const [constantBpm, setConstantBpm] = useLocalStorage('constant_start_bpm', 120);
     const [increment, setIncrement] = useState(2);
     const [stepSeconds, setStepSeconds] = useState(10);
     const [totalSeconds, setTotalSeconds] = useState(120);
-    const [timeSigTop, setTimeSigTop] = useState(4);
-    const [timeSigBottom, setTimeSigBottom] = useState(4);
-    const [countdownBars, setCountdownBars] = useState(1);
+    const [timeSigTop, setTimeSigTop] = useLocalStorage('top_time_sign', 4);
+    const [timeSigBottom, setTimeSigBottom] = useLocalStorage('bottom_time_sign', 4);
+    const [countdownBars, setCountdownBars] = useLocalStorage('countdown_bars', 1);
+
     // Save local settings
     const [soundSettings, setSoundSettings] = useLocalStorage('metronome_sound_settings', {
         metronomeAccent: 987.77,
