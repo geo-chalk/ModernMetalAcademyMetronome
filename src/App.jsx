@@ -3,6 +3,7 @@ import {Menu} from 'lucide-react'; // Fixed: Correctly importing Menu icon
 import packageJson from '../package.json';
 import {useMetronome} from './hooks/useMetronome';
 import {useKeyboardControls} from './hooks/useKeyboardControls';
+import {useLocalStorage} from './hooks/useLocalStorage';
 
 // Components
 import MarkedSlider from './components/MarkedSlider';
@@ -20,17 +21,10 @@ import AccentSwitch from './components/AccentSwitch.jsx';
 import SideMenu from './components/SideMenu';
 import SoundConfig from './components/SoundConfig';
 
+
 export default function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [mode, setMode] = useState(() => {
-        try {
-            const savedMode = localStorage.getItem('metronome_app_mode');
-            // Default to 'trainer' if nothing is saved
-            return savedMode !== null ? savedMode : 'trainer';
-        } catch (e) {
-            return 'trainer';
-        }
-    });
+    const [mode, setMode] = useLocalStorage('metronome_app_mode', 'trainer');
     const [trainerStartBpm, setTrainerStartBpm] = useState(120);
     const [constantBpm, setConstantBpm] = useState(120);
     const [increment, setIncrement] = useState(2);
@@ -40,23 +34,11 @@ export default function App() {
     const [timeSigBottom, setTimeSigBottom] = useState(4);
     const [countdownBars, setCountdownBars] = useState(1);
     // Save local settings
-    const [soundSettings, setSoundSettings] = useState(() => {
-        try {
-            const saved = localStorage.getItem('sound_config');
-            return saved !== null ? JSON.parse(saved) : {
-                metronomeAccent: 1000,
-                metronomeClick: 500,
-                countInAccent: 1200,
-                countInClick: 800
-            };
-        } catch (e) {
-            return {
-                metronomeAccent: 1000,
-                metronomeClick: 500,
-                countInAccent: 1200,
-                countInClick: 800
-            };
-        }
+    const [soundSettings, setSoundSettings] = useLocalStorage('metronome_sound_settings', {
+        metronomeAccent: 987.77,
+        metronomeClick: 493.88,
+        countInAccent: 1174.66,
+        countInClick: 587.33
     });
 
     const {
@@ -108,15 +90,6 @@ export default function App() {
     };
 
     const isSettingsMode = mode === 'info' || mode === 'sound';
-
-    // Update local config when variables are updated
-    useEffect(() => {
-        localStorage.setItem('sound_config', JSON.stringify(soundSettings));
-    }, [soundSettings]);
-
-    useEffect(() => {
-        localStorage.setItem('metronome_app_mode', mode);
-    }, [mode]);
 
     return (
         <div
