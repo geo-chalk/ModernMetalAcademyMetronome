@@ -1,4 +1,5 @@
 import React, {useCallback, useState} from 'react';
+import { Menu } from 'lucide-react'; // Fixed: Correctly importing Menu icon
 import packageJson from '../package.json';
 import {useMetronome} from './hooks/useMetronome';
 import {useKeyboardControls} from './hooks/useKeyboardControls';
@@ -6,7 +7,6 @@ import {useKeyboardControls} from './hooks/useKeyboardControls';
 // Components
 import MarkedSlider from './components/MarkedSlider';
 import BeatIndicators from './components/BeatIndicators';
-import ModeSelector from './components/ModeSelector';
 import BPMDisplay from './components/BPMDisplay';
 import TrainerProgress from './components/TrainerProgress';
 import TimeSignatureSelector from './components/TimeSignatureSelector';
@@ -17,8 +17,10 @@ import BpmRangeDisplay from './components/BpmRangeDisplay';
 import Info from './components/Info';
 import StartBPMSlider from './components/StartBPMSlider';
 import AccentSwitch from './components/AccentSwitch.jsx';
+import SideMenu from './components/SideMenu';
 
 export default function App() {
+    const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [mode, setMode] = useState('trainer');
     const [trainerStartBpm, setTrainerStartBpm] = useState(120);
     const [constantBpm, setConstantBpm] = useState(120);
@@ -35,7 +37,6 @@ export default function App() {
         isAccentEnabled, setIsAccentEnabled
     } = useMetronome(mode === 'trainer' ? trainerStartBpm : constantBpm);
 
-    // Update handleStart to include countdownBars
     const handleStart = useCallback(() => {
         const startTempo = mode === 'trainer' ? trainerStartBpm : constantBpm;
         start({
@@ -44,7 +45,7 @@ export default function App() {
             stepSeconds,
             totalSeconds,
             timeSigTop,
-            timeSigBottom, // Ensure this is being passed
+            timeSigBottom,
             countdownBars
         }, startTempo);
     }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start]);
@@ -81,16 +82,32 @@ export default function App() {
     const isInfoMode = mode === 'info';
 
     return (
-        <div
-            className="fixed inset-0 w-full h-[100svh] bg-black text-white flex items-center justify-center overflow-hidden touch-none p-2 sm:p-4">
-            <div
-                className="bg-[#1E1E1E] w-full max-w-md h-full max-h-full sm:h-auto rounded-2xl border border-white/5 flex flex-col shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 w-full h-[100svh] bg-black text-white flex items-center justify-center overflow-hidden touch-none p-2 sm:p-4">
+            <SideMenu
+                isOpen={isMenuOpen}
+                onClose={() => setIsMenuOpen(false)}
+                mode={mode}
+                setMode={setMode}
+            />
+
+            <div className="bg-[#1E1E1E] w-full max-w-md h-full max-h-full sm:h-auto rounded-2xl border border-white/5 flex flex-col shadow-2xl overflow-hidden">
 
                 {/* Header */}
-                <div className="p-4 sm:p-6 pb-1 flex-none">
-                    <ModeSelector mode={mode} setMode={setMode} onStop={handleStop}/>
+                <div className="p-4 sm:p-6 pb-1 flex-none flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <button
+                            onClick={() => setIsMenuOpen(true)}
+                            className="p-2 -ml-2 text-white/40 hover:text-white transition-colors"
+                        >
+                            <Menu size={24} />
+                        </button>
+                        <span className="text-[10px] font-black tracking-[0.3em] uppercase text-[#FF820C]">
+                            {mode} Mode
+                        </span>
+                    </div>
+
                     {!isInfoMode && (
-                        <div className="flex items-center justify-between mt-4 px-1">
+                        <div className="flex items-center justify-between mt-2 px-1">
                             <div className="flex-1 max-w-[80%]">
                                 <VolumeSlider volume={volume} setVolume={setVolume}/>
                             </div>
@@ -101,24 +118,16 @@ export default function App() {
                         </div>
                     )}
                 </div>
+
                 {/* Main Content */}
                 <div className="px-4 sm:px-6 flex-1 overflow-y-auto no-scrollbar flex flex-col touch-pan-y">
                     {!isInfoMode ? (
-
                         <div className="my-auto pt-0 pb-4 space-y-4">
-
-                            {/* Optimized Layout Row */}
                             <div className="flex items-center justify-between mb-0">
-
-                                {/* Left: Pre-roll */}
                                 <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
-
-                                {/* Center: BPM */}
                                 <div className="flex-1">
                                     <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive}/>
                                 </div>
-
-                                {/* Right: Time Signature */}
                                 <TimeSignatureSelector top={timeSigTop} bottom={timeSigBottom} setTop={setTimeSigTop}
                                                        setBottom={setTimeSigBottom} isActive={isActive}/>
                             </div>
@@ -155,14 +164,14 @@ export default function App() {
                             </div>
                         </div>
                     ) : (
-                        <div className="flex-1 flex items-center justify-center italic text-white/20 text-sm">
+                        <div className="flex-1">
                             <Info/>
                         </div>
                     )}
                 </div>
 
-                <div
-                    className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E]">
+                {/* Footer */}
+                <div className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E]">
                     {!isInfoMode && <PlayButton isActive={isActive} onClick={toggleMetronome}/>}
                     <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase">
                         v{packageJson.version}
