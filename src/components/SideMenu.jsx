@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, FastForward, Infinity as InfinityIcon, Info } from 'lucide-react';
+import { X, FastForward, Infinity as InfinityIcon, Info, Volume2 } from 'lucide-react';
 
 const SideMenu = ({ isOpen, onClose, mode, setMode }) => {
     const handleModeChange = (newMode) => {
@@ -26,7 +26,8 @@ const SideMenu = ({ isOpen, onClose, mode, setMode }) => {
                     {[
                         { id: 'trainer', label: 'Trainer', icon: <FastForward size={18}/> },
                         { id: 'constant', label: 'Constant', icon: <InfinityIcon size={18}/> },
-                        { id: 'info', label: 'Info', icon: <Info size={18}/> }
+                        { id: 'info', label: 'Info', icon: <Info size={18}/> },
+                        { id: 'sound', label: 'Sound Config', icon: <Volume2 size={18}/> }
                     ].map((m) => (
                         <button
                             key={m.id}

@@ -5,7 +5,7 @@ const CountdownSelector = ({value, setter, isActive}) => {
     return (
         <div className="flex items-center border-r border-white/10 pr-6 h-20">
             <div className="flex flex-col items-center gap-1">
-                <span className="text-[8px] font-black text-white/50 tracking-widest">Countdown</span>
+                <span className="text-[8px] font-black text-white/50 tracking-widest">Count-in</span>
                 <div className={`relative flex items-center group rounded-md transition-all ${
                     !isActive ? 'bg-white/[0.03] hover:bg-white/[0.08] cursor-pointer' : 'opacity-50'
                 } p-1.5`}>
