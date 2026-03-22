@@ -36,28 +36,29 @@ export default function App() {
 
     // Save local settings
     const [soundSettings, setSoundSettings] = useLocalStorage('metronome_sound_settings', {
-        metronomeAccent: 987.77,
-        metronomeClick: 493.88,
-        countInAccent: 1174.66,
-        countInClick: 587.33
+        metronomeAccent: 987.77, metronomeClick: 493.88, countInAccent: 1174.66, countInClick: 587.33
     });
 
     const {
-        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress,
-        start, stop, beatsPerMeasure, volume, setVolume,
-        isAccentEnabled, setIsAccentEnabled
+        bpm,
+        setBpm,
+        isActive,
+        currentBeat,
+        stepProgress,
+        totalProgress,
+        start,
+        stop,
+        beatsPerMeasure,
+        volume,
+        setVolume,
+        isAccentEnabled,
+        setIsAccentEnabled
     } = useMetronome(mode === 'trainer' ? trainerStartBpm : constantBpm, soundSettings);
 
     const handleStart = useCallback(() => {
         const startTempo = mode === 'trainer' ? trainerStartBpm : constantBpm;
         start({
-            mode,
-            increment,
-            stepSeconds,
-            totalSeconds,
-            timeSigTop,
-            timeSigBottom,
-            countdownBars
+            mode, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars
         }, startTempo, soundSettings);
     }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start, soundSettings]);
 
@@ -92,8 +93,7 @@ export default function App() {
 
     const isSettingsMode = mode === 'info' || mode === 'sound';
 
-    return (
-        <div
+    return (<div
             className="fixed inset-0 w-full h-[100svh] bg-black text-white flex items-center justify-center overflow-hidden touch-none p-2 sm:p-4">
             <SideMenu
                 isOpen={isMenuOpen}
@@ -110,17 +110,20 @@ export default function App() {
                     <div className="flex items-center justify-between">
                         <button
                             onClick={() => setIsMenuOpen(true)}
-                            className="p-2 -ml-2 text-white/40 hover:text-white transition-colors"
+                            className="group p-2 -ml-2 text-white/40 hover:text-white transition-colors flex items-center gap-2"
                         >
                             <Menu size={24}/>
+                            <span
+                                className="text-[10px] font-black tracking-[0.2em] uppercase mt-0.5 group-hover:text-white transition-colors">
+                Menu
+            </span>
                         </button>
                         <span className="text-[10px] font-black tracking-[0.3em] uppercase text-[#FF820C]">
-                            {mode === 'sound' ? 'Sound Config' : mode} Mode
-                        </span>
+            {mode === 'sound' ? 'Sound Config' : mode} Mode
+        </span>
                     </div>
 
-                    {!isSettingsMode && (
-                        <div className="flex items-center justify-between mt-2 px-1">
+                    {!isSettingsMode && (<div className="flex items-center justify-between mt-2 px-1">
                             <div className="flex-1 max-w-[80%]">
                                 <VolumeSlider volume={volume} setVolume={setVolume}/>
                             </div>
@@ -128,14 +131,12 @@ export default function App() {
                                 isOn={isAccentEnabled}
                                 onToggle={() => setIsAccentEnabled(!isAccentEnabled)}
                             />
-                        </div>
-                    )}
+                        </div>)}
                 </div>
 
                 {/* Main Content */}
                 <div className="px-4 sm:px-6 flex-1 overflow-y-auto no-scrollbar flex flex-col touch-pan-y">
-                    {!isSettingsMode ? (
-                        <div className="my-auto pt-0 pb-4 space-y-4">
+                    {!isSettingsMode ? (<div className="my-auto pt-0 pb-4 space-y-4">
                             <div className="flex items-center justify-between mb-0">
                                 <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
                                 <div className="flex-1">
@@ -172,16 +173,11 @@ export default function App() {
                                         <BpmRangeDisplay startBpm={trainerStartBpm} increment={increment}
                                                          stepSeconds={stepSeconds} totalSeconds={totalSeconds}
                                                          mode={mode}/>
-                                    </div>
-                                )}
+                                    </div>)}
                             </div>
-                        </div>
-                    ) : mode === 'info' ? (
-                        <div className="flex-1">
+                        </div>) : mode === 'info' ? (<div className="flex-1">
                             <Info/>
-                        </div>
-                    ) : (
-                        <div className="flex-1">
+                        </div>) : (<div className="flex-1">
                             <SoundConfig
                                 settings={soundSettings}
                                 setSettings={setSoundSettings}
@@ -190,8 +186,7 @@ export default function App() {
                                 isAccentEnabled={isAccentEnabled}
                                 setIsAccentEnabled={setIsAccentEnabled}
                             />
-                        </div>
-                    )}
+                        </div>)}
                 </div>
 
                 {/* Footer */}
@@ -203,6 +198,5 @@ export default function App() {
                     </span>
                 </div>
             </div>
-        </div>
-    );
+        </div>);
 }

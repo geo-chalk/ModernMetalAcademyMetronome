@@ -57,7 +57,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     // 2. FORCE SYNC: Ensure Tone.js matches the loaded volume immediately on mount
     useEffect(() => {
         Tone.getDestination().volume.value = volume;
-    }, []); // Run once on mount
+    }, [volume]); // Run once on mount
 
     // Keep the Ref in sync with the state from App.jsx
     useEffect(() => {
