@@ -1,14 +1,11 @@
-import {useState, useRef, useEffect} from 'react';
+import {useState, useRef, useEffect, useCallback} from 'react';
 import * as Tone from 'tone';
 import {useLocalStorage} from './useLocalStorage'; // Import your new hook
+import {SOUND_ASSETS} from '../constants/sounds'; // Import from central file
 
 // Defines which beats receive a higher pitch based on complex time signatures
 const ACCENT_MAP = {
-    "7/8": [1, 4, 6],
-    "5/8": [1, 4],
-    "6/8": [1, 4],
-    "9/8": [1, 4, 7],
-    "12/8": [1, 4, 7, 10],
+    "7/8": [1, 4, 6], "5/8": [1, 4], "6/8": [1, 4], "9/8": [1, 4, 7], "12/8": [1, 4, 7, 10],
 };
 
 export const useMetronome = (initialBpm, initialSoundSettings) => {
@@ -22,6 +19,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     const [isAccentEnabled, setIsAccentEnabled] = useLocalStorage('metronome_accents', true);
 
     const clickSynth = useRef(null);
+    const playersRef = useRef(null); // Ref for .wav samples
     const requestRef = useRef(null);
     const sessionStartTimeRef = useRef(null);
     const stepStartTimeRef = useRef(null);
@@ -33,21 +31,40 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     // Triangle waves and ultra-fast attack ensure the sound 'peaks'
     // exactly when the visual indicator triggers.
     useEffect(() => {
+        // Initialize Synth
         clickSynth.current = new Tone.Synth({
-            oscillator: {type: "triangle"},
-            envelope: {
-                attack: 0.002, // 2ms attack eliminates 'pop' but feels instant
-                decay: 0.08,
-                sustain: 0,
-                release: 0.08
+            oscillator: {type: "triangle"}, envelope: {
+                attack: 0.002, decay: 0.08, sustain: 0, release: 0.08
             }
         }).toDestination();
 
+        // Initialize Players for .wav files
+        // These are loaded into memory immediately for performance
+        playersRef.current = new Tone.Players(SOUND_ASSETS).toDestination();
+
         return () => {
             if (clickSynth.current) clickSynth.current.dispose();
+            if (playersRef.current) playersRef.current.dispose();
         };
     }, []);
 
+    // Helper function to handle the "Freq vs Sample" logic
+    const playClick = useCallback((source, time) => {
+        if (typeof source === 'number') {
+            clickSynth.current.triggerAttackRelease(source, "32n", time);
+        } else if (typeof source === 'string') {
+            if (playersRef.current && playersRef.current.has(source)) {
+                const player = playersRef.current.player(source);
+                if (player && player.loaded) {
+                    player.start(time);
+                } else {
+                    console.warn(`Sample "${source}" is not loaded yet.`);
+                }
+            } else {
+                console.error(`Sample "${source}" not found in SOUND_ASSETS.`);
+            }
+        }
+    }, []);
 
     // Sync state changes to the Tone.js Transport global clock
     useEffect(() => {
@@ -133,6 +150,9 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         await Tone.start();
         stop(); // Ensure a clean slate
 
+        // Ensure the reference used by the scheduleRepeat loop is updated immediately
+        soundSettingsRef.current = soundConfigs;
+
         Tone.getTransport().bpm.value = startBpm;
         settingsRef.current = settings;
         setBeatsPerMeasure(settings.timeSigTop);
@@ -151,12 +171,11 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
             const isAccented = accents.includes(displayBeat);
 
             // If accents are disabled, every beat uses the standard 500Hz frequency
-            const freq = (isAccentEnabledRef.current && isAccented)
+            const source = (isAccentEnabledRef.current && isAccented)
                 ? soundSettingsRef.current.metronomeAccent
                 : soundSettingsRef.current.metronomeClick;
 
-            // Trigger audio precisely at the Transport's 'time'
-            clickSynth.current.triggerAttackRelease(freq, "32n", time);
+            playClick(source, time);
 
             // Tone.Draw schedules visual updates to happen on the next
             // animation frame relative to the audio time, keeping them in sync.
@@ -178,11 +197,11 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
 
             // Use slightly higher frequencies (1200/800) than the main loop
             // to audibly distinguish the countdown phase.
-            const freq = (isAccentEnabledRef.current && isAccented)
+            const source = (isAccentEnabledRef.current && isAccented)
                 ? soundSettingsRef.current.countInAccent
                 : soundSettingsRef.current.countInClick;
 
-            clickSynth.current.triggerAttackRelease(freq, "32n", clickTime);
+            playClick(source, clickTime);
         }
 
         // CRITICAL FIX: Schedule a reset of the beatCounter to 0
