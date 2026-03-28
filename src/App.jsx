@@ -33,6 +33,7 @@ export default function App() {
     const [timeSigTop, setTimeSigTop] = useLocalStorage('top_time_sign', 4);
     const [timeSigBottom, setTimeSigBottom] = useLocalStorage('bottom_time_sign', 4);
     const [countdownBars, setCountdownBars] = useLocalStorage('countdown_bars', 1);
+    const [lockFinalBpm, setLockFinalBpm] = useLocalStorage('metronome_lock_final', false);
 
     // Save local settings
     const [activePack, setActivePack] = useLocalStorage('metronome_active_pack', 'synth');
@@ -92,9 +93,16 @@ export default function App() {
 
         const startTempo = mode === 'trainer' ? trainerStartBpm : constantBpm;
         start({
-            mode, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars
+            mode,
+            increment,
+            stepSeconds,
+            totalSeconds,
+            timeSigTop,
+            timeSigBottom,
+            countdownBars,
+            lockFinalBpm
         }, startTempo, soundSettings[activePack]); // FIX: Pass only the active pack
-    }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack]);
+    }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
 
     const handleStop = useCallback(() => {
         if (mode === 'constant') setConstantBpm(bpm);
@@ -194,6 +202,7 @@ export default function App() {
                             min={40} max={300} unit="bpm" defaultValue={120}
                         />
 
+
                         {mode === 'trainer' && (
                             <div className="mt-2 pt-4 border-t border-white/5 flex flex-col gap-1">
                                 <MarkedSlider label="Increment" value={increment} setter={setIncrement} min={0}
@@ -204,10 +213,71 @@ export default function App() {
                                 <MarkedSlider label="Duration" value={totalSeconds} setter={setTotalSeconds}
                                               min={30} max={600} step={30}
                                               displayValue={formatDuration(totalSeconds)} defaultValue={120}/>
-                                <BpmRangeDisplay startBpm={trainerStartBpm} increment={increment}
-                                                 stepSeconds={stepSeconds} totalSeconds={totalSeconds}
-                                                 mode={mode}/>
-                            </div>)}
+
+                                {/* Row Container: Component on Left, Button on Right */}
+                                <div
+                                    className="mt-6 pt-2 border-t border-white/5 flex items-center justify-between min-h-[48px]">
+
+                                    <BpmRangeDisplay
+                                        startBpm={trainerStartBpm}
+                                        increment={increment}
+                                        stepSeconds={stepSeconds}
+                                        totalSeconds={totalSeconds}
+                                        mode={mode}
+                                    />
+
+                                    <button
+                                        onClick={() => setLockFinalBpm(!lockFinalBpm)}
+                                        disabled={isActive}
+                                        className={`
+            group relative flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300
+            ${lockFinalBpm
+                                            ? "bg-[#FF820C]/10 border-[#FF820C] text-[#FF820C] shadow-[0_0_15px_rgba(255,130,12,0.1)]"
+                                            : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white hover:bg-white/[0.07]"
+                                        }
+            ${isActive ? "opacity-30 cursor-not-allowed" : "active:scale-95"}
+        `}
+                                    >
+                                        {/* Dynamic Icon with slight bounce animation */}
+                                        <div
+                                            className={`transition-transform duration-300 ${lockFinalBpm ? "scale-110" : "scale-100"}`}>
+                                            {lockFinalBpm ? (
+                                                <div className="relative">
+                                                    <div
+                                                        className="absolute inset-0 blur-sm bg-[#FF820C]/30 rounded-full"/>
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                         strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                                                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                                    </svg>
+                                                </div>
+                                            ) : (
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
+                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                                                    <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
+                                                </svg>
+                                            )}
+                                        </div>
+
+                                        <span
+                                            className="text-[10px] font-black uppercase tracking-[0.15em] leading-none mt-0.5"
+                                            style={{fontFamily: "'K2D', sans-serif"}}>
+            {lockFinalBpm ? "Locked" : "Lock Final BPM"}
+        </span>
+
+                                        {/* Subtle inner glow for active state */}
+                                        {lockFinalBpm && (
+                                            <div
+                                                className="absolute inset-0 rounded-xl border border-white/10 pointer-events-none"/>
+                                        )}
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                     </div>
                 </div>) : mode === 'info' ? (<div className="flex-1">
                     <Info/>

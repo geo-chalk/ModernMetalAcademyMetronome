@@ -104,8 +104,17 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
             setTotalProgress(newTotalProgress);
 
             if (newTotalProgress >= 100) {
-                stop();
-                return;
+                if (settings.lockFinalBpm) {
+                    // Instead of stopping, we "freeze" the trainer logic
+                    // and keep the transport running at the current BPM.
+                    settingsRef.current = {...settings, mode: 'constant'};
+                    setStepProgress(100);
+                    setTotalProgress(100);
+                    return;
+                } else {
+                    stop();
+                    return;
+                }
             }
 
             // Calculate progress within the current BPM 'step'
