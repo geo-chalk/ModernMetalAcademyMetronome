@@ -25,6 +25,18 @@ import SoundConfig from './components/SoundConfig';
 export default function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [mode, setMode] = useLocalStorage('metronome_app_mode', 'trainer');
+    useEffect(() => {
+        // Check if this is a new session (not a refresh)
+        const hasSeenLanding = sessionStorage.getItem('metronome_session_active');
+
+        if (!hasSeenLanding) {
+            // 1. This is the first time accessing the page in this tab
+            setMode('trainer');
+            // 2. Set the flag so refreshes are recognized later
+            sessionStorage.setItem('metronome_session_active', 'true');
+        }
+    }, []); // Empty dependency array so it only runs once on mount
+
     const [trainerStartBpm, setTrainerStartBpm] = useLocalStorage('trainer_start_bpm', 120);
     const [constantBpm, setConstantBpm] = useLocalStorage('constant_start_bpm', 120);
     const [increment, setIncrement] = useState(2);
