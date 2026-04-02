@@ -134,33 +134,40 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
             notesInQueue.current.shift();
         }
 
-        if (now >= sessionStartTimeRef.current && settings.mode === 'trainer') {
+        // --- FIXED LOGIC ---
+        // We check for trainer mode OR if we are currently in the "Locked" state
+        // (where the session is finished but we want to keep the UI at 100%)
+        if (settings.mode === 'trainer') {
             const totalMs = settings.totalSeconds * 1000;
             const elapsedTotal = now - sessionStartTimeRef.current;
             const newTotalProgress = Math.min((elapsedTotal / totalMs) * 100, 100);
+
             setTotalProgress(newTotalProgress);
 
             if (newTotalProgress >= 100) {
                 if (settings.lockFinalBpm) {
-                    settingsRef.current = {...settings, mode: 'constant'};
+                    // Update state to 100% one last time and switch mode to prevent further BPM increases
                     setStepProgress(100);
                     setTotalProgress(100);
-                    return;
+                    settingsRef.current = {...settings, mode: 'constant'};
+                    // We keep the loop running so the metronome keeps clicking,
+                    // but the "trainer" block won't be entered again.
                 } else {
                     stop();
                     return;
                 }
-            }
-
-            const stepMs = settings.stepSeconds * 1000;
-            const elapsedInStep = now - stepStartTimeRef.current;
-
-            if (elapsedInStep >= stepMs) {
-                stepStartTimeRef.current = now;
-                setStepProgress(0);
-                setBpm(prev => prev + settings.increment);
             } else {
-                setStepProgress((elapsedInStep / stepMs) * 100);
+                // Only update steps if we haven't finished the session
+                const stepMs = settings.stepSeconds * 1000;
+                const elapsedInStep = now - stepStartTimeRef.current;
+
+                if (elapsedInStep >= stepMs) {
+                    stepStartTimeRef.current = now;
+                    setStepProgress(0);
+                    setBpm(prev => prev + settings.increment);
+                } else {
+                    setStepProgress((elapsedInStep / stepMs) * 100);
+                }
             }
         }
         requestRef.current = requestAnimationFrame(animate);
