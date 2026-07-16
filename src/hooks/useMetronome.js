@@ -22,6 +22,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     const requestRef = useRef(null);
     const sessionStartTimeRef = useRef(null);
     const stepStartTimeRef = useRef(null);
+    const stepCountRef = useRef(0);
     const settingsRef = useRef(null);
 
     // --- SCHEDULER REFS ---
@@ -164,7 +165,14 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
                 if (elapsedInStep >= stepMs) {
                     stepStartTimeRef.current = now;
                     setStepProgress(0);
-                    setBpm(prev => prev + settings.increment);
+                    // See-saw ramp: alternate +increment then -negativeIncrement each interval.
+                    // negativeIncrement is capped at increment (see App.jsx), so net drift is
+                    // never negative and BPM can't fall below the start tempo. When it's 0 the
+                    // down-intervals are skipped entirely, giving a pure monotonic ramp.
+                    const negIncr = settings.negativeIncrement || 0;
+                    const goingUp = negIncr === 0 || stepCountRef.current % 2 === 0;
+                    setBpm(prev => prev + (goingUp ? settings.increment : -negIncr));
+                    stepCountRef.current++;
                 } else {
                     setStepProgress((elapsedInStep / stepMs) * 100);
                 }
@@ -221,6 +229,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         // --- PREPARE MAIN LOOP ---
         nextNoteTimeRef.current = nowTone + countdownDurationSec;
         beatCounterRef.current = 0;
+        stepCountRef.current = 0;
 
         // Start scheduler heartbeat
         timerIDRef.current = setInterval(scheduler, SCHEDULE_INTERVAL_MS);

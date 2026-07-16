@@ -40,6 +40,7 @@ export default function App() {
     const [trainerStartBpm, setTrainerStartBpm] = useLocalStorage('trainer_start_bpm', 120);
     const [constantBpm, setConstantBpm] = useLocalStorage('constant_start_bpm', 120);
     const [increment, setIncrement] = useState(2);
+    const [negativeIncrement, setNegativeIncrement] = useState(0);
     const [stepSeconds, setStepSeconds] = useState(10);
     const [totalSeconds, setTotalSeconds] = useState(120);
     const [timeSigTop, setTimeSigTop] = useLocalStorage('top_time_sign', 4);
@@ -107,6 +108,7 @@ export default function App() {
         start({
             mode,
             increment,
+            negativeIncrement,
             stepSeconds,
             totalSeconds,
             timeSigTop,
@@ -114,7 +116,7 @@ export default function App() {
             countdownBars,
             lockFinalBpm
         }, startTempo, soundSettings[activePack]); // FIX: Pass only the active pack
-    }, [mode, trainerStartBpm, constantBpm, increment, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
+    }, [mode, trainerStartBpm, constantBpm, increment, negativeIncrement, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
 
     const handleStop = useCallback(() => {
         if (mode === 'constant') setConstantBpm(bpm);
@@ -137,6 +139,13 @@ export default function App() {
             setConstantBpm(val);
             setBpm(val);
         }
+    };
+
+    // Keep the negative increment from ever exceeding the positive one,
+    // so the see-saw ramp can never lower the net tempo.
+    const handleIncrementChange = (val) => {
+        setIncrement(val);
+        if (negativeIncrement > val) setNegativeIncrement(val);
     };
 
     const formatDuration = (sec) => {
@@ -217,7 +226,8 @@ export default function App() {
 
                         {mode === 'trainer' && (
                             <div className="mt-2 pt-4 border-t border-white/5 flex flex-col gap-1">
-                                <MarkedSlider label="Increment" value={increment} setter={setIncrement} min={0}
+                                <MarkedSlider label="Pos. Increment" value={increment} setter={handleIncrementChange}
+                                              min={0}
                                               max={10} unit="bpm" defaultValue={2}/>
                                 <MarkedSlider label="Interval" value={stepSeconds} setter={setStepSeconds}
                                               min={5} max={90} step={5}
@@ -225,6 +235,9 @@ export default function App() {
                                 <MarkedSlider label="Duration" value={totalSeconds} setter={setTotalSeconds}
                                               min={30} max={600} step={30}
                                               displayValue={formatDuration(totalSeconds)} defaultValue={120}/>
+                                <MarkedSlider label="Neg. Increment" value={negativeIncrement}
+                                              setter={setNegativeIncrement} min={0}
+                                              max={increment} unit="bpm" defaultValue={0}/>
 
                                 {/* Row Container: Component on Left, Button on Right */}
                                 <div
@@ -233,6 +246,7 @@ export default function App() {
                                     <BpmRangeDisplay
                                         startBpm={trainerStartBpm}
                                         increment={increment}
+                                        negativeIncrement={negativeIncrement}
                                         stepSeconds={stepSeconds}
                                         totalSeconds={totalSeconds}
                                         mode={mode}
