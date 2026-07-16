@@ -43,6 +43,9 @@ export default function App() {
     const [negativeIncrement, setNegativeIncrement] = useState(0);
     const [stepSeconds, setStepSeconds] = useState(10);
     const [totalSeconds, setTotalSeconds] = useState(120);
+    const [intervalUnit, setIntervalUnit] = useLocalStorage('metronome_interval_unit', 'time');
+    const [intervalBars, setIntervalBars] = useState(4);
+    const [totalReps, setTotalReps] = useState(8);
     const [timeSigTop, setTimeSigTop] = useLocalStorage('top_time_sign', 4);
     const [timeSigBottom, setTimeSigBottom] = useLocalStorage('bottom_time_sign', 4);
     const [countdownBars, setCountdownBars] = useLocalStorage('countdown_bars', 1);
@@ -109,14 +112,17 @@ export default function App() {
             mode,
             increment,
             negativeIncrement,
+            intervalUnit,
             stepSeconds,
             totalSeconds,
+            intervalBars,
+            totalReps,
             timeSigTop,
             timeSigBottom,
             countdownBars,
             lockFinalBpm
         }, startTempo, soundSettings[activePack]); // FIX: Pass only the active pack
-    }, [mode, trainerStartBpm, constantBpm, increment, negativeIncrement, stepSeconds, totalSeconds, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
+    }, [mode, trainerStartBpm, constantBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds, intervalBars, totalReps, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
 
     const handleStop = useCallback(() => {
         if (mode === 'constant') setConstantBpm(bpm);
@@ -155,6 +161,12 @@ export default function App() {
     };
 
     const isSettingsMode = mode === 'info' || mode === 'sound';
+
+    // Number of BPM changes the ramp will make. In both units the final step
+    // coincides with the session stop, so we subtract one (mirrors the engine).
+    const totalIncrements = intervalUnit === 'bars'
+        ? Math.max(0, totalReps - 1)
+        : Math.max(0, Math.floor(totalSeconds / stepSeconds) - 1);
 
     return (<div
         className="fixed inset-0 w-full h-[100svh] bg-black text-white flex items-center justify-center overflow-hidden touch-none p-2 sm:p-4">
@@ -226,15 +238,40 @@ export default function App() {
 
                         {mode === 'trainer' && (
                             <div className="mt-2 pt-4 border-t border-white/5 flex flex-col gap-1">
+                                {/* Interval unit toggle: ramp by wall-clock time or by bars played */}
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-[14px] font-bold text-white/40 tracking-wider"
+                                          style={{fontFamily: "'K2D', sans-serif"}}>Interval Type</span>
+                                    <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/5">
+                                        {['time', 'bars'].map((u) => (
+                                            <button key={u} onClick={() => setIntervalUnit(u)}
+                                                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${intervalUnit === u ? 'bg-[#FF820C] text-white' : 'text-white/40 hover:text-white'}`}
+                                                    style={{fontFamily: "'K2D', sans-serif"}}>
+                                                {u === 'time' ? 'Time' : 'Bars'}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
                                 <MarkedSlider label="Pos. Increment" value={increment} setter={handleIncrementChange}
                                               min={0}
                                               max={10} unit="bpm" defaultValue={2}/>
-                                <MarkedSlider label="Interval" value={stepSeconds} setter={setStepSeconds}
-                                              min={5} max={90} step={5}
-                                              displayValue={formatDuration(stepSeconds)} defaultValue={10}/>
-                                <MarkedSlider label="Duration" value={totalSeconds} setter={setTotalSeconds}
-                                              min={30} max={600} step={30}
-                                              displayValue={formatDuration(totalSeconds)} defaultValue={120}/>
+                                {intervalUnit === 'time' ? (<>
+                                    <MarkedSlider label="Interval" value={stepSeconds} setter={setStepSeconds}
+                                                  min={5} max={90} step={5}
+                                                  displayValue={formatDuration(stepSeconds)} defaultValue={10}/>
+                                    <MarkedSlider label="Duration" value={totalSeconds} setter={setTotalSeconds}
+                                                  min={30} max={600} step={30}
+                                                  displayValue={formatDuration(totalSeconds)} defaultValue={120}/>
+                                </>) : (<>
+                                    <MarkedSlider label="Interval" value={intervalBars} setter={setIntervalBars}
+                                                  min={1} max={16} step={1}
+                                                  displayValue={`${intervalBars} ${intervalBars === 1 ? 'bar' : 'bars'}`}
+                                                  defaultValue={4}/>
+                                    <MarkedSlider label="Reps" value={totalReps} setter={setTotalReps}
+                                                  min={2} max={30} step={1}
+                                                  displayValue={`${totalReps} reps`} defaultValue={8}/>
+                                </>)}
                                 <MarkedSlider label="Neg. Increment" value={negativeIncrement}
                                               setter={setNegativeIncrement} min={0}
                                               max={increment} unit="bpm" defaultValue={0}/>
@@ -247,8 +284,7 @@ export default function App() {
                                         startBpm={trainerStartBpm}
                                         increment={increment}
                                         negativeIncrement={negativeIncrement}
-                                        stepSeconds={stepSeconds}
-                                        totalSeconds={totalSeconds}
+                                        totalIncrements={totalIncrements}
                                         mode={mode}
                                     />
 
