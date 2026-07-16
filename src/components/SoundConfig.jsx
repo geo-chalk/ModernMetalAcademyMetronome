@@ -1,9 +1,10 @@
 import React, {useState, useEffect, useRef} from 'react';
 import * as Tone from 'tone';
-import {Play, Square} from 'lucide-react';
+import {Play, Square, ChevronDown} from 'lucide-react';
 import MarkedSlider from './MarkedSlider';
 import VolumeSlider from './VolumeSlider';
 import AccentSwitch from './AccentSwitch';
+import { SOUND_ASSETS, AVAILABLE_SAMPLES } from '../constants/sounds';
 
 const NOTE_FREQUENCIES = [
     {note: "C3", freq: 130.81}, {note: "C#/Db3", freq: 138.59}, {note: "D3", freq: 146.83}, {
@@ -60,8 +61,10 @@ const NOTE_FREQUENCIES = [
 ];
 
 const SoundConfig = ({
+                         activePack,
+                         setActivePack,
                          settings,
-                         setSettings,
+                         setAllSettings,
                          volume,
                          setVolume,
                          isAccentEnabled,
@@ -71,6 +74,7 @@ const SoundConfig = ({
     const [playingType, setPlayingType] = useState(null);
 
     const synthRef = useRef(null);
+    const playersRef = useRef(null);
     const intervalRef = useRef(null);
     const stepRef = useRef(0);
     const settingsRef = useRef(settings);
@@ -90,9 +94,12 @@ const SoundConfig = ({
             envelope: {attack: 0.002, decay: 0.08, sustain: 0, release: 0.08}
         }).toDestination();
 
+        playersRef.current = new Tone.Players(SOUND_ASSETS).toDestination();
+
         return () => {
             stopTest();
             if (synthRef.current) synthRef.current.dispose();
+            if (playersRef.current) playersRef.current.dispose();
         };
     }, []);
 
@@ -113,50 +120,49 @@ const SoundConfig = ({
             stopTest();
             setPlayingType(type);
             intervalRef.current = setInterval(() => {
-                if (!synthRef.current) return;
-
                 const isBeatOne = stepRef.current % 4 === 0;
-                const useAccentFreq = isAccentEnabledRef.current && isBeatOne;
-
+                const useAccent = isAccentEnabledRef.current && isBeatOne;
                 const current = settingsRef.current;
-                const freq = type === 'metronome'
-                    ? (useAccentFreq ? current.metronomeAccent : current.metronomeClick)
-                    : (useAccentFreq ? current.countInAccent : current.countInClick);
 
-                synthRef.current.triggerAttackRelease(freq, "32n", Tone.now());
+                const source = type === 'metronome'
+                    ? (useAccent ? current.metronomeAccent : current.metronomeClick)
+                    : (useAccent ? current.countInAccent : current.countInClick);
+
+                if (typeof source === 'number') {
+                    synthRef.current.triggerAttackRelease(source, "32n", Tone.now());
+                } else {
+                    const player = playersRef.current.player(source);
+                    if (player && player.loaded) player.start(Tone.now());
+                }
+
                 stepRef.current++;
             }, 500);
         }
     };
 
-    const updateFrequency = (key, value) => {
-        setSettings(prev => ({...prev, [key]: value}));
+    const updateValue = (key, value) => {
+        setAllSettings(prev => ({
+            ...prev,
+            [activePack]: {...prev[activePack], [key]: value}
+        }));
     };
 
-    // Helper to find note info and current index for sliders
     const getNoteInfo = (freq) => {
-        // Find index of the frequency that matches exactly (or closest)
         const index = NOTE_FREQUENCIES.findIndex(n => n.freq === freq);
-        const info = index !== -1 ? NOTE_FREQUENCIES[index] : NOTE_FREQUENCIES[48]; // Fallback to C4
+        const info = index !== -1 ? NOTE_FREQUENCIES[index] : NOTE_FREQUENCIES[48];
         return {...info, index: index !== -1 ? index : 48};
-    };
-
-    const handleSliderChange = (key, index) => {
-        const newFreq = NOTE_FREQUENCIES[index].freq;
-        updateFrequency(key, newFreq);
     };
 
     const getIndexByFreq = (targetFreq) => {
         const index = NOTE_FREQUENCIES.findIndex(n => Math.abs(n.freq - targetFreq) < 0.01);
-        return index !== -1 ? index : 48; // Fallback to C4
+        return index !== -1 ? index : 48;
     };
 
-    // Map your requested defaults to their array indices
     const DEFAULTS = {
-        metronomeAccent: getIndexByFreq(987.77), // B5
-        metronomeClick: getIndexByFreq(493.88),  // B4
-        countInAccent: getIndexByFreq(1174.66),  // C#/Db6
-        countInClick: getIndexByFreq(587.33)     // G5
+        metronomeAccent: getIndexByFreq(987.77),
+        metronomeClick: getIndexByFreq(493.88),
+        countInAccent: getIndexByFreq(1174.66),
+        countInClick: getIndexByFreq(587.33)
     };
 
     return (
@@ -166,6 +172,7 @@ const SoundConfig = ({
                 Sound Configuration
             </h1>
 
+            {/* Volume and Accents */}
             <section className="bg-white/[0.03] p-4 rounded-lg border border-white/5">
                 <div className="flex items-center justify-between gap-6">
                     <div className="flex-1">
@@ -184,75 +191,91 @@ const SoundConfig = ({
                 </div>
             </section>
 
-            {/* Metronome Section */}
-            <section className="space-y-4">
-                <div className="flex justify-between items-center px-1">
-                    <h2 className="text-white text-[16px] font-black tracking-widest uppercase opacity-100"
-                        style={k2dStack}>Metronome</h2>
-                    <button
-                        onClick={() => toggleTest('metronome')}
-                        className={`flex items-center gap-2 text-[10px] font-bold uppercase transition-all ${playingType === 'metronome' ? 'text-red-500' : 'text-[#FF820C] hover:text-white'}`}
-                        style={k2dStack}
-                    >
-                        {playingType === 'metronome' ? <><Square size={12} fill="currentColor"/> Stop</> : <><Play
-                            size={12} fill="currentColor"/> Test Loop</>}
-                    </button>
-                </div>
-                <div className="bg-white/[0.02] p-4 rounded-lg border border-white/5 space-y-2">
-                    {['metronomeAccent', 'metronomeClick'].map((key) => {
-                        const info = getNoteInfo(settings[key]);
-                        return (
-                            <MarkedSlider
-                                key={key}
-                                label={key === 'metronomeAccent' ? "Accents" : "Clicks"}
-                                value={info.index}
-                                setter={(val) => handleSliderChange(key, val)}
-                                min={0}
-                                max={NOTE_FREQUENCIES.length - 1}
-                                step={1}
-                                // FIX: Pass the calculated index constant here
-                                defaultValue={DEFAULTS[key]}
-                                displayValue={`${info.note} (${info.freq} Hz)`}
-                            />
-                        );
-                    })}
+            {/* Pack Selector */}
+            <section className="bg-white/[0.03] p-4 rounded-lg border border-white/5">
+                <div className="flex items-center justify-between px-1">
+                    <span className="text-white text-[16px] font-black tracking-widest uppercase opacity-100"
+                          style={k2dStack}>
+                        Sound Pack
+                    </span>
+                    <div className="relative flex items-center bg-white/5 rounded px-2 py-1">
+                        <select
+                            value={activePack}
+                            onChange={(e) => {
+                                stopTest();
+                                setActivePack(e.target.value);
+                            }}
+                            className="bg-transparent text-white text-sm font-bold focus:outline-none appearance-none pr-6 cursor-pointer uppercase tracking-wider"
+                            style={k2dStack}
+                        >
+                            {['synth', 'natural'].map(pack => (
+                                <option key={pack} value={pack} className="bg-[#1E1E1E]">{pack}</option>
+                            ))}
+                        </select>
+                        <ChevronDown size={12} className="absolute right-2 text-white/20 pointer-events-none"/>
+                    </div>
                 </div>
             </section>
 
-            {/* Count-in Section */}
-            <section className="space-y-4">
-                <div className="flex justify-between items-center px-1">
-                    <h2 className="text-white text-[16px] font-black tracking-widest uppercase opacity-100"
-                        style={k2dStack}>Count-in</h2>
-                    <button
-                        onClick={() => toggleTest('countIn')}
-                        className={`flex items-center gap-2 text-[10px] font-bold uppercase transition-all ${playingType === 'countIn' ? 'text-red-500' : 'text-[#FF820C] hover:text-white'}`}
-                        style={k2dStack}
-                    >
-                        {playingType === 'countIn' ? <><Square size={12} fill="currentColor"/> Stop</> : <><Play
-                            size={12} fill="currentColor"/> Test Loop</>}
-                    </button>
-                </div>
-                <div className="bg-white/[0.02] p-4 rounded-lg border border-white/5 space-y-2">
-                    {['countInAccent', 'countInClick'].map((key) => {
-                        const info = getNoteInfo(settings[key]);
-                        return (
-                            <MarkedSlider
-                                key={key}
-                                label={key === 'countInAccent' ? "Accents" : "Clicks"}
-                                value={info.index}
-                                setter={(val) => handleSliderChange(key, val)}
-                                min={0}
-                                max={NOTE_FREQUENCIES.length - 1}
-                                step={1}
-                                // FIX: Pass the calculated index constant here
-                                defaultValue={DEFAULTS[key]}
-                                displayValue={`${info.note} (${info.freq} Hz)`}
-                            />
-                        );
-                    })}
-                </div>
-            </section>
+
+            {/* Config Sections */}
+            {['metronome', 'countIn'].map((sectionKey) => (
+                <section key={sectionKey} className="space-y-4">
+                    <div className="flex justify-between items-center px-1">
+                        <h2 className="text-white text-[16px] font-black tracking-widest uppercase opacity-100"
+                            style={k2dStack}>{sectionKey === 'metronome' ? 'Metronome' : 'Count-in'}</h2>
+                        <button
+                            onClick={() => toggleTest(sectionKey)}
+                            className={`flex items-center gap-2 text-[10px] font-bold uppercase transition-all ${playingType === sectionKey ? 'text-red-500' : 'text-[#FF820C] hover:text-white'}`}
+                            style={k2dStack}
+                        >
+                            {playingType === sectionKey ? <><Square size={12} fill="currentColor"/> Stop</> : <><Play
+                                size={12} fill="currentColor"/> Test Loop</>}
+                        </button>
+                    </div>
+
+                    <div className="bg-white/[0.02] p-4 rounded-lg border border-white/5 space-y-2">
+                        {[
+                            {key: `${sectionKey}Accent`, label: "Accents"},
+                            {key: `${sectionKey}Click`, label: "Clicks"}
+                        ].map(({key, label}) => (
+                            <div key={key}>
+                                {activePack === 'synth' ? (
+                                    <MarkedSlider
+                                        label={label}
+                                        value={getNoteInfo(settings[key]).index}
+                                        setter={(val) => updateValue(key, NOTE_FREQUENCIES[val].freq)}
+                                        min={0}
+                                        max={NOTE_FREQUENCIES.length - 1}
+                                        step={1}
+                                        defaultValue={DEFAULTS[key]}
+                                        displayValue={`${getNoteInfo(settings[key]).note} (${getNoteInfo(settings[key]).freq} Hz)`}
+                                    />
+                                ) : (
+                                    <div
+                                        className="flex justify-between items-center py-3 border-b border-white/5 last:border-0">
+                                        <span className="text-[14px] font-bold text-white/40"
+                                              style={k2dStack}>{label}</span>
+                                        <div className="relative flex items-center bg-white/5 rounded px-2 py-1">
+                                            <select
+                                                value={settings[key]}
+                                                onChange={(e) => updateValue(key, e.target.value)}
+                                                className="bg-transparent text-white text-sm font-bold focus:outline-none appearance-none pr-6 cursor-pointer"
+                                                style={k2dStack}
+                                            >
+                                                {AVAILABLE_SAMPLES.map(s => <option key={s} value={s}
+                                                                                    className="bg-[#1E1E1E]">{s.toUpperCase()}</option>)}
+                                            </select>
+                                            <ChevronDown size={12}
+                                                         className="absolute right-2 text-white/20 pointer-events-none"/>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </section>
+            ))}
         </div>
     );
 };
