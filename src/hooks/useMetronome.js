@@ -31,6 +31,8 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     // --- SCHEDULER REFS ---
     const nextNoteTimeRef = useRef(0);
     const beatCounterRef = useRef(0);
+    const countdownRemainingRef = useRef(0); // count-in beats left to schedule
+    const countdownIndexRef = useRef(0);     // count-in beat position (for accents)
     const notesInQueue = useRef([]); // Visual sync queue
     const LOOKAHEAD_MS = 100.0; // How far to schedule into the future
     const SCHEDULE_INTERVAL_MS = 25.0; // How often to check for new notes
@@ -101,7 +103,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         playClick(source, time);
     };
 
-    const advanceNote = () => {
+    const advanceTime = () => {
         // Determine the scaling factor: 4 / bottom number (e.g., 4/8 = 0.5x duration)
         const timeSigBottom = settingsRef.current?.timeSigBottom || 4;
         const beatScale = 4 / timeSigBottom;
@@ -110,15 +112,44 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         const secondsPerBeat = (60.0 / bpmRef.current) * beatScale;
 
         nextNoteTimeRef.current += secondsPerBeat;
+    };
+
+    const advanceNote = () => {
+        advanceTime();
         beatCounterRef.current++;
+    };
+
+    // Count-in click: same lookahead scheduling as the main loop (so Stop can
+    // interrupt it), but it plays the count-in sounds and drives no beat indicator.
+    const scheduleCountdownNote = (time) => {
+        const settings = settingsRef.current;
+        const sigKey = `${settings.timeSigTop}/${settings.timeSigBottom}`;
+        const accents = ACCENT_MAP[sigKey] || [1];
+        const countdownBeat = (countdownIndexRef.current % settings.timeSigTop) + 1;
+        const isAccented = accents.includes(countdownBeat);
+
+        const source = (isAccentEnabledRef.current && isAccented)
+            ? soundSettingsRef.current.countInAccent
+            : soundSettingsRef.current.countInClick;
+
+        playClick(source, time);
     };
 
     const scheduler = () => {
         // Schedule notes until the next note is beyond our lookahead window
         while (nextNoteTimeRef.current < Tone.now() + (LOOKAHEAD_MS / 1000.0)) {
-            const currentBeatInLoop = (beatCounterRef.current % settingsRef.current.timeSigTop) + 1;
-            scheduleNote(currentBeatInLoop, nextNoteTimeRef.current);
-            advanceNote();
+            if (countdownRemainingRef.current > 0) {
+                // Still in the count-in: schedule a count-in click and advance the
+                // clock without touching the main beat counter.
+                scheduleCountdownNote(nextNoteTimeRef.current);
+                countdownIndexRef.current++;
+                countdownRemainingRef.current--;
+                advanceTime();
+            } else {
+                const currentBeatInLoop = (beatCounterRef.current % settingsRef.current.timeSigTop) + 1;
+                scheduleNote(currentBeatInLoop, nextNoteTimeRef.current);
+                advanceNote();
+            }
         }
     };
 
@@ -217,6 +248,8 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     const stop = () => {
         if (timerIDRef.current) clearInterval(timerIDRef.current);
         cancelAnimationFrame(requestRef.current);
+        countdownRemainingRef.current = 0;
+        countdownIndexRef.current = 0;
 
         setIsActive(false);
         setCurrentBeat(1);
@@ -244,23 +277,13 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         const countdownDurationSec = totalCountdownBeats * secondsPerBeat;
 
         const nowTone = Tone.now();
-        const sigKey = `${settings.timeSigTop}/${settings.timeSigBottom}`;
-        const accents = ACCENT_MAP[sigKey] || [1];
 
-        for (let i = 0; i < totalCountdownBeats; i++) {
-            const clickTime = nowTone + (i * secondsPerBeat);
-            const countdownBeat = (i % settings.timeSigTop) + 1;
-            const isAccented = accents.includes(countdownBeat);
-
-            const source = (isAccentEnabledRef.current && isAccented)
-                ? soundSettingsRef.current.countInAccent
-                : soundSettingsRef.current.countInClick;
-
-            playClick(source, clickTime);
-        }
-
-        // --- PREPARE MAIN LOOP ---
-        nextNoteTimeRef.current = nowTone + countdownDurationSec;
+        // --- PREPARE THE SCHEDULER ---
+        // The count-in is now scheduled beat-by-beat by the lookahead scheduler,
+        // immediately ahead of the main loop, so a Stop mid-count-in interrupts it.
+        nextNoteTimeRef.current = nowTone;
+        countdownRemainingRef.current = totalCountdownBeats;
+        countdownIndexRef.current = 0;
         beatCounterRef.current = 0;
         stepCountRef.current = 0;
         playedBeatsRef.current = 0;
