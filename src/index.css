@@ -57,3 +57,11 @@ html, body {
     display: block;
   }
 }
+
+/* Content only relevant with a physical keyboard. Shown by default (safe
+   fallback) and hidden on touch-primary devices. */
+@media (hover: none) and (pointer: coarse) {
+  .desktop-only {
+    display: none;
+  }
+}
