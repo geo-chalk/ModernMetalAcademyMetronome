@@ -44,8 +44,8 @@ export default function App() {
     const [stepSeconds, setStepSeconds] = useState(10);
     const [totalSeconds, setTotalSeconds] = useState(120);
     const [intervalUnit, setIntervalUnit] = useLocalStorage('metronome_interval_unit', 'time');
-    const [intervalBars, setIntervalBars] = useState(4);
-    const [totalReps, setTotalReps] = useState(8);
+    const [intervalBars, setIntervalBars] = useState(8);
+    const [totalReps, setTotalReps] = useState(10);
     const [timeSigTop, setTimeSigTop] = useLocalStorage('top_time_sign', 4);
     const [timeSigBottom, setTimeSigBottom] = useLocalStorage('bottom_time_sign', 4);
     const [countdownBars, setCountdownBars] = useLocalStorage('countdown_bars', 1);
@@ -168,6 +168,23 @@ export default function App() {
         ? Math.max(0, totalReps - 1)
         : Math.max(0, Math.floor(totalSeconds / stepSeconds) - 1);
 
+    // Estimated wall-clock length of a bar-mode session. Because the tempo ramps,
+    // each rep's duration depends on its BPM, so we walk the see-saw trajectory
+    // (mirroring the engine) and sum each interval's real time.
+    const barModeSeconds = (() => {
+        if (intervalUnit !== 'bars') return 0;
+        const beatScale = 4 / timeSigBottom;
+        const beatsPerInterval = intervalBars * timeSigTop;
+        let bpmVal = trainerStartBpm;
+        let seconds = 0;
+        for (let i = 0; i < totalReps; i++) {
+            seconds += beatsPerInterval * (60 / bpmVal) * beatScale;
+            const goingUp = negativeIncrement === 0 || i % 2 === 0;
+            bpmVal += goingUp ? increment : -negativeIncrement;
+        }
+        return seconds;
+    })();
+
     return (<div
         className="fixed inset-0 w-full h-[100svh] bg-black text-white flex items-center justify-center overflow-hidden touch-none p-2 sm:p-4">
         <SideMenu
@@ -211,7 +228,7 @@ export default function App() {
 
             {/* Main Content */}
             <div className="px-4 sm:px-6 flex-1 overflow-y-auto no-scrollbar flex flex-col touch-pan-y">
-                {!isSettingsMode ? (<div className="my-auto pt-0 pb-4 space-y-4">
+                {!isSettingsMode ? (<div className="flex-1 flex flex-col justify-center pt-2 pb-4 space-y-3">
                     <div className="flex items-center justify-between mb-0">
                         <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
                         <div className="flex-1">
@@ -265,12 +282,12 @@ export default function App() {
                                                   displayValue={formatDuration(totalSeconds)} defaultValue={120}/>
                                 </>) : (<>
                                     <MarkedSlider label="Interval" value={intervalBars} setter={setIntervalBars}
-                                                  min={1} max={16} step={1}
+                                                  min={1} max={32} step={1}
                                                   displayValue={`${intervalBars} ${intervalBars === 1 ? 'bar' : 'bars'}`}
-                                                  defaultValue={4}/>
+                                                  defaultValue={8}/>
                                     <MarkedSlider label="Reps" value={totalReps} setter={setTotalReps}
                                                   min={2} max={30} step={1}
-                                                  displayValue={`${totalReps} reps`} defaultValue={8}/>
+                                                  displayValue={`${totalReps} reps`} defaultValue={10}/>
                                 </>)}
                                 <MarkedSlider label="Neg. Increment" value={negativeIncrement}
                                               setter={setNegativeIncrement} min={0}
@@ -278,13 +295,14 @@ export default function App() {
 
                                 {/* Row Container: Component on Left, Button on Right */}
                                 <div
-                                    className="mt-6 pt-2 border-t border-white/5 flex items-center justify-between min-h-[48px]">
+                                    className="mt-6 pt-3 border-t border-white/5 flex items-center justify-between gap-3">
 
                                     <BpmRangeDisplay
                                         startBpm={trainerStartBpm}
                                         increment={increment}
                                         negativeIncrement={negativeIncrement}
                                         totalIncrements={totalIncrements}
+                                        duration={intervalUnit === 'bars' ? formatDuration(Math.round(barModeSeconds)) : null}
                                         mode={mode}
                                     />
 
@@ -292,7 +310,7 @@ export default function App() {
                                         onClick={() => setLockFinalBpm(!lockFinalBpm)}
                                         disabled={isActive}
                                         className={`
-            group relative flex items-center gap-2 px-4 py-2 rounded-xl border transition-all duration-300
+            group relative flex shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl border transition-all duration-300 whitespace-nowrap
             ${lockFinalBpm
                                             ? "bg-[#FF820C]/10 border-[#FF820C] text-[#FF820C] shadow-[0_0_15px_rgba(255,130,12,0.1)]"
                                             : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white hover:bg-white/[0.07]"
@@ -325,7 +343,7 @@ export default function App() {
                                         </div>
 
                                         <span
-                                            className="text-[10px] font-black uppercase tracking-[0.15em] leading-none mt-0.5"
+                                            className="text-[10px] font-black uppercase tracking-[0.08em] leading-none mt-0.5"
                                             style={{fontFamily: "'K2D', sans-serif"}}>
             {lockFinalBpm ? "Locked" : "Lock Final BPM"}
         </span>

@@ -16,7 +16,7 @@ body {
   margin: 0;
   background-color: #000000;
   color: #ffffff;
-  font-family: system-ui, -apple-system, sans-serif;
+  font-family: 'K2D', system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -webkit-tap-highlight-color: transparent;
 }
@@ -44,4 +44,16 @@ html, body {
 #root {
   height: 100%;
   width: 100%;
+}
+
+/* Hint that's only useful on touch devices (fine-drag gesture); hidden on
+   desktop where a precise pointer + the tap-to-edit BPM already exist. */
+.touch-only-hint {
+  display: none;
+}
+
+@media (hover: none) and (pointer: coarse) {
+  .touch-only-hint {
+    display: block;
+  }
 }
