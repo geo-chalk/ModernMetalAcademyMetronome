@@ -6,7 +6,7 @@ const TrainerProgress = memo(({isActive, progress, totalProgress, mode}) => {
     const robotoStack = {fontFamily: "'K2D', sans-serif"};
 
     return (
-        <div className="flex flex-col gap-3 py-4 mb-2">
+        <div className="flex flex-col gap-2 py-2">
             <div className="w-full">
                 <div className="flex justify-between items-center mb-1 text-white/40 tracking-[0.1em]">
                     <span className="text-[12px] font-black" style={robotoStack}>Cycle</span>

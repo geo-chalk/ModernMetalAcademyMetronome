@@ -5,7 +5,11 @@ export default {
     "./src/**/*.{js,ts,jsx,tsx}", // Tailwind looks here to find your "bg-blue-600" classes
   ],
   theme: {
-    extend: {},
+    extend: {
+      fontFamily: {
+        sans: ['K2D', 'system-ui', '-apple-system', 'sans-serif'],
+      },
+    },
   },
   plugins: [],
 }

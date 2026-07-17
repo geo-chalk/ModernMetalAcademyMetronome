@@ -23,6 +23,9 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     const sessionStartTimeRef = useRef(null);
     const stepStartTimeRef = useRef(null);
     const stepCountRef = useRef(0);
+    const playedBeatsRef = useRef(0);      // beats actually heard (bar-mode timing)
+    const stepStartBeatRef = useRef(0);    // playedBeats at the start of the current step
+    const lastBeatTimeRef = useRef(null);  // audio time of the last played beat (smooth progress)
     const settingsRef = useRef(null);
 
     // --- SCHEDULER REFS ---
@@ -132,17 +135,51 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         // Visual Sync: Only update the UI beat when the audio time is reached
         while (notesInQueue.current.length > 0 && notesInQueue.current[0].time < toneNow) {
             setCurrentBeat(notesInQueue.current[0].beat);
+            lastBeatTimeRef.current = notesInQueue.current[0].time;
             notesInQueue.current.shift();
+            playedBeatsRef.current++;
         }
 
         // --- FIXED LOGIC ---
         // We check for trainer mode OR if we are currently in the "Locked" state
         // (where the session is finished but we want to keep the UI at 100%)
         if (settings.mode === 'trainer') {
-            const totalMs = settings.totalSeconds * 1000;
-            const elapsedTotal = now - sessionStartTimeRef.current;
-            const newTotalProgress = Math.min((elapsedTotal / totalMs) * 100, 100);
+            // Resolve "elapsed vs threshold" for the current step and the whole session
+            // in whichever unit is active. Bar mode counts beats actually played
+            // (audio-accurate, via playedBeatsRef); time mode uses the wall clock.
+            const isBarMode = settings.intervalUnit === 'bars';
+            let stepElapsed, stepThreshold, totalElapsed, totalThreshold;
 
+            if (isBarMode) {
+                const stepBeats = settings.intervalBars * settings.timeSigTop;
+                // Beats elapsed since the first beat *started*. A beat sounding marks
+                // 0 elapsed at its onset (hence playedBeats - 1) and grows to 1 as the
+                // next beat becomes due; we interpolate within the current beat from the
+                // audio time so progress advances smoothly, reads 0% on the downbeat, and
+                // reaches 100% exactly as the bar's final beat ends.
+                const beatScale = 4 / settings.timeSigBottom;
+                const secPerBeat = (60.0 / bpmRef.current) * beatScale;
+                const frac = (lastBeatTimeRef.current != null && secPerBeat > 0)
+                    ? Math.min(Math.max((toneNow - lastBeatTimeRef.current) / secPerBeat, 0), 1)
+                    : 0;
+                const elapsedBeats = Math.max(0, playedBeatsRef.current - 1 + frac);
+
+                stepThreshold = stepBeats;
+                stepElapsed = elapsedBeats - stepStartBeatRef.current;
+                // Reps = number of intervals played; the last interval's increment
+                // coincides with the stop, so the ramp does (totalReps - 1) increments.
+                totalThreshold = settings.totalReps * stepBeats;
+                totalElapsed = elapsedBeats;
+            } else {
+                stepThreshold = settings.stepSeconds * 1000;
+                stepElapsed = now - stepStartTimeRef.current;
+                totalThreshold = settings.totalSeconds * 1000;
+                totalElapsed = now - sessionStartTimeRef.current;
+            }
+
+            const newTotalProgress = totalThreshold > 0
+                ? Math.min((totalElapsed / totalThreshold) * 100, 100)
+                : 100;
             setTotalProgress(newTotalProgress);
 
             if (newTotalProgress >= 100) {
@@ -157,25 +194,21 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
                     stop();
                     return;
                 }
+            } else if (stepElapsed >= stepThreshold) {
+                // Step boundary: advance the step marker and ramp the BPM.
+                if (isBarMode) stepStartBeatRef.current += stepThreshold;
+                else stepStartTimeRef.current = now;
+                setStepProgress(0);
+                // See-saw ramp: alternate +increment then -negativeIncrement each step.
+                // negativeIncrement is capped at increment (see App.jsx), so net drift is
+                // never negative and BPM can't fall below the start tempo. When it's 0 the
+                // down-steps are skipped entirely, giving a pure monotonic ramp.
+                const negIncr = settings.negativeIncrement || 0;
+                const goingUp = negIncr === 0 || stepCountRef.current % 2 === 0;
+                setBpm(prev => prev + (goingUp ? settings.increment : -negIncr));
+                stepCountRef.current++;
             } else {
-                // Only update steps if we haven't finished the session
-                const stepMs = settings.stepSeconds * 1000;
-                const elapsedInStep = now - stepStartTimeRef.current;
-
-                if (elapsedInStep >= stepMs) {
-                    stepStartTimeRef.current = now;
-                    setStepProgress(0);
-                    // See-saw ramp: alternate +increment then -negativeIncrement each interval.
-                    // negativeIncrement is capped at increment (see App.jsx), so net drift is
-                    // never negative and BPM can't fall below the start tempo. When it's 0 the
-                    // down-intervals are skipped entirely, giving a pure monotonic ramp.
-                    const negIncr = settings.negativeIncrement || 0;
-                    const goingUp = negIncr === 0 || stepCountRef.current % 2 === 0;
-                    setBpm(prev => prev + (goingUp ? settings.increment : -negIncr));
-                    stepCountRef.current++;
-                } else {
-                    setStepProgress((elapsedInStep / stepMs) * 100);
-                }
+                setStepProgress((stepElapsed / stepThreshold) * 100);
             }
         }
         requestRef.current = requestAnimationFrame(animate);
@@ -230,6 +263,9 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         nextNoteTimeRef.current = nowTone + countdownDurationSec;
         beatCounterRef.current = 0;
         stepCountRef.current = 0;
+        playedBeatsRef.current = 0;
+        stepStartBeatRef.current = 0;
+        lastBeatTimeRef.current = null;
 
         // Start scheduler heartbeat
         timerIDRef.current = setInterval(scheduler, SCHEDULE_INTERVAL_MS);
