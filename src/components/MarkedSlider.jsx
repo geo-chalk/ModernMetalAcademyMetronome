@@ -2,7 +2,8 @@ import React, {useState} from 'react';
 
 const MarkedSlider = ({label, value, setter, min, max, unit, defaultValue, step = 1, displayValue}) => {
     const thumbSize = 16;
-    const fraction = (defaultValue - min) / (max - min);
+    const range = max - min;
+    const fraction = range > 0 ? (defaultValue - min) / range : 0;
     const markerLeft = `calc(${fraction * 100}% + ${(0.5 - fraction) * thumbSize}px)`;
     const [isDragging, setIsDragging] = useState(false);
 
