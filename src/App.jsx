@@ -48,6 +48,8 @@ export default function App() {
     const [intervalUnit, setIntervalUnit] = useLocalStorage('metronome_interval_unit', 'time');
     const [intervalBars, setIntervalBars] = useState(8);
     const [totalReps, setTotalReps] = useState(10);
+    const [restSeconds, setRestSeconds] = useState(0);   // rest between intervals (time mode)
+    const [restBars, setRestBars] = useState(0);         // rest between intervals (bars mode)
     const [timeSigTop, setTimeSigTop] = useLocalStorage('top_time_sign', 4);
     const [timeSigBottom, setTimeSigBottom] = useLocalStorage('bottom_time_sign', 4);
     const [countdownBars, setCountdownBars] = useLocalStorage('countdown_bars', 1);
@@ -97,6 +99,7 @@ export default function App() {
         currentBeat,
         stepProgress,
         totalProgress,
+        isResting,
         start,
         stop,
         beatsPerMeasure,
@@ -119,12 +122,14 @@ export default function App() {
             totalSeconds,
             intervalBars,
             totalReps,
+            restSeconds,
+            restBars,
             timeSigTop,
             timeSigBottom,
             countdownBars,
             lockFinalBpm
         }, startTempo, soundSettings[activePack]); // FIX: Pass only the active pack
-    }, [mode, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds, intervalBars, totalReps, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
+    }, [mode, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds, intervalBars, totalReps, restSeconds, restBars, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
 
     const handleStop = useCallback(() => {
         if (mode === 'constant') setStartBpm(bpm);
@@ -193,6 +198,10 @@ export default function App() {
             seconds += beatsPerInterval * (60 / bpmVal) * beatScale;
             const goingUp = negativeIncrement === 0 || i % 2 === 0;
             bpmVal += goingUp ? increment : -negativeIncrement;
+            // Rest after each interval except the last, timed at the upcoming tempo.
+            if (restBars > 0 && i < totalReps - 1) {
+                seconds += restBars * timeSigTop * (60 / bpmVal) * beatScale;
+            }
         }
         return seconds;
     })();
@@ -271,7 +280,7 @@ export default function App() {
                                     beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}/>
 
                     <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
-                                     mode={mode}/>
+                                     isResting={isResting} mode={mode}/>
 
                     <div className="flex flex-col gap-1">
                         <StartBPMSlider
@@ -310,6 +319,9 @@ export default function App() {
                                     <MarkedSlider label="Duration" value={totalSeconds} setter={setTotalSeconds}
                                                   min={30} max={600} step={30}
                                                   displayValue={formatDuration(totalSeconds)} defaultValue={120}/>
+                                    <MarkedSlider label="Rest" value={restSeconds} setter={setRestSeconds}
+                                                  min={0} max={60} step={5}
+                                                  displayValue={formatDuration(restSeconds)} defaultValue={0}/>
                                 </>) : (<>
                                     <MarkedSlider label="Interval" value={intervalBars} setter={setIntervalBars}
                                                   min={1} max={32} step={1}
@@ -318,6 +330,10 @@ export default function App() {
                                     <MarkedSlider label="Reps" value={totalReps} setter={setTotalReps}
                                                   min={2} max={30} step={1}
                                                   displayValue={`${totalReps} reps`} defaultValue={10}/>
+                                    <MarkedSlider label="Rest" value={restBars} setter={setRestBars}
+                                                  min={0} max={8} step={1}
+                                                  displayValue={`${restBars} ${restBars === 1 ? 'bar' : 'bars'}`}
+                                                  defaultValue={0}/>
                                 </>)}
                                 <MarkedSlider label="Neg. Increment" value={negativeIncrement}
                                               setter={setNegativeIncrement} min={0}
