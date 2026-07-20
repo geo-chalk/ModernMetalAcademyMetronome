@@ -4,6 +4,7 @@ import packageJson from '../package.json';
 import {useMetronome} from './hooks/useMetronome';
 import {useKeyboardControls} from './hooks/useKeyboardControls';
 import {useLocalStorage} from './hooks/useLocalStorage';
+import {useWakeLock} from './hooks/useWakeLock';
 
 // Components
 import MarkedSlider from './components/MarkedSlider';
@@ -141,6 +142,9 @@ export default function App() {
     }, [isActive, handleStop, setMode]);
 
     useKeyboardControls(toggleMetronome);
+
+    // Keep the screen awake while the metronome is playing.
+    useWakeLock(isActive);
 
     const displayBpm = isActive ? bpm : startBpm;
 
