@@ -37,8 +37,9 @@ export default function App() {
         }
     }, []); // Empty dependency array so it only runs once on mount
 
-    const [trainerStartBpm, setTrainerStartBpm] = useLocalStorage('trainer_start_bpm', 120);
-    const [constantBpm, setConstantBpm] = useLocalStorage('constant_start_bpm', 120);
+    // Shared tempo across Trainer (its start BPM) and Constant (its tempo) — one
+    // value, so the tempo carries over when switching between the two modes.
+    const [startBpm, setStartBpm] = useLocalStorage('metronome_start_bpm', 120);
     const [increment, setIncrement] = useState(2);
     const [negativeIncrement, setNegativeIncrement] = useState(0);
     const [stepSeconds, setStepSeconds] = useState(10);
@@ -102,12 +103,12 @@ export default function App() {
         setVolume,
         isAccentEnabled,
         setIsAccentEnabled
-    } = useMetronome(mode === 'trainer' ? trainerStartBpm : constantBpm, soundSettings[activePack]);
+    } = useMetronome(startBpm, soundSettings[activePack]);
 
 
     const handleStart = useCallback(() => {
 
-        const startTempo = mode === 'trainer' ? trainerStartBpm : constantBpm;
+        const startTempo = startBpm;
         start({
             mode,
             increment,
@@ -122,10 +123,10 @@ export default function App() {
             countdownBars,
             lockFinalBpm
         }, startTempo, soundSettings[activePack]); // FIX: Pass only the active pack
-    }, [mode, trainerStartBpm, constantBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds, intervalBars, totalReps, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
+    }, [mode, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds, intervalBars, totalReps, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
 
     const handleStop = useCallback(() => {
-        if (mode === 'constant') setConstantBpm(bpm);
+        if (mode === 'constant') setStartBpm(bpm);
         stop();
     }, [mode, bpm, stop]);
 
@@ -133,18 +134,21 @@ export default function App() {
         isActive ? handleStop() : handleStart();
     }, [isActive, handleStart, handleStop]);
 
+    // Changing screens from the menu always stops a running session first.
+    const handleMenuSelect = useCallback((newMode) => {
+        if (isActive) handleStop();
+        setMode(newMode);
+    }, [isActive, handleStop, setMode]);
+
     useKeyboardControls(toggleMetronome);
 
-    const displayBpm = isActive ? bpm : (mode === 'trainer' ? trainerStartBpm : constantBpm);
+    const displayBpm = isActive ? bpm : startBpm;
 
     const displaySetter = (val) => {
-        if (mode === 'trainer') {
-            setTrainerStartBpm(val);
-            if (!isActive) setBpm(val);
-        } else {
-            setConstantBpm(val);
-            setBpm(val);
-        }
+        setStartBpm(val);
+        // Reflect on the live click only when it should: always in Constant, and
+        // in Trainer only before a session starts (a running ramp owns the tempo).
+        if (mode === 'constant' || !isActive) setBpm(val);
     };
 
     // Keep the negative increment from ever exceeding the positive one,
@@ -162,6 +166,10 @@ export default function App() {
 
     const isSettingsMode = mode === 'info' || mode === 'sound';
 
+    // In Trainer mode a running session is locked — no parameter changes mid-drill.
+    // (Constant mode stays live-editable so the tempo can be adjusted while playing.)
+    const trainerLock = isActive && mode === 'trainer';
+
     // Number of BPM changes the ramp will make. In both units the final step
     // coincides with the session stop, so we subtract one (mirrors the engine).
     const totalIncrements = intervalUnit === 'bars'
@@ -175,7 +183,7 @@ export default function App() {
         if (intervalUnit !== 'bars') return 0;
         const beatScale = 4 / timeSigBottom;
         const beatsPerInterval = intervalBars * timeSigTop;
-        let bpmVal = trainerStartBpm;
+        let bpmVal = startBpm;
         let seconds = 0;
         for (let i = 0; i < totalReps; i++) {
             seconds += beatsPerInterval * (60 / bpmVal) * beatScale;
@@ -191,7 +199,7 @@ export default function App() {
             isOpen={isMenuOpen}
             onClose={() => setIsMenuOpen(false)}
             mode={mode}
-            setMode={setMode}
+            setMode={handleMenuSelect}
         />
 
         <div
@@ -210,9 +218,25 @@ export default function App() {
                 Menu
             </span>
                     </button>
-                    <span className="text-[10px] font-black tracking-[0.3em] uppercase text-[#FF820C]">
-            {mode === 'sound' ? 'Sound Config' : mode} Mode
-        </span>
+                    {!isSettingsMode ? (
+                        <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/5">
+                            {['trainer', 'constant'].map((m) => (
+                                <button
+                                    key={m}
+                                    onClick={() => { if (m !== mode) handleMenuSelect(m); }}
+                                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${
+                                        mode === m ? 'bg-[#FF820C] text-white' : 'text-white/40 hover:text-white'
+                                    }`}
+                                >
+                                    {m}
+                                </button>
+                            ))}
+                        </div>
+                    ) : (
+                        <span className="text-[10px] font-black tracking-[0.3em] uppercase text-[#FF820C]">
+                            {mode === 'sound' ? 'Sound Config' : mode} Mode
+                        </span>
+                    )}
                 </div>
 
                 {!isSettingsMode && (<div className="flex items-center justify-between mt-2 px-1">
@@ -232,7 +256,8 @@ export default function App() {
                     <div className="flex items-center justify-between mb-0">
                         <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
                         <div className="flex-1">
-                            <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive}/>
+                            <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive}
+                                        locked={trainerLock}/>
                         </div>
                         <TimeSignatureSelector top={timeSigTop} bottom={timeSigBottom} setTop={setTimeSigTop}
                                                setBottom={setTimeSigBottom} isActive={isActive}/>
@@ -247,14 +272,15 @@ export default function App() {
                     <div className="flex flex-col gap-1">
                         <StartBPMSlider
                             label={mode === 'trainer' ? "Start BPM" : "Tempo"}
-                            value={mode === 'trainer' ? trainerStartBpm : (isActive ? bpm : constantBpm)}
+                            value={isActive && mode === 'constant' ? bpm : startBpm}
                             setter={displaySetter}
                             min={40} max={300} unit="bpm" defaultValue={120}
+                            disabled={trainerLock}
                         />
 
 
                         {mode === 'trainer' && (
-                            <div className="mt-2 pt-4 border-t border-white/5 flex flex-col gap-1">
+                            <div className={`mt-2 pt-4 border-t border-white/5 flex flex-col gap-1 ${isActive ? 'opacity-50 pointer-events-none' : ''}`}>
                                 {/* Interval unit toggle: ramp by wall-clock time or by bars played */}
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-[14px] font-bold text-white/40 tracking-wider"
@@ -298,7 +324,7 @@ export default function App() {
                                     className="mt-6 pt-3 border-t border-white/5 flex items-center justify-between gap-3">
 
                                     <BpmRangeDisplay
-                                        startBpm={trainerStartBpm}
+                                        startBpm={startBpm}
                                         increment={increment}
                                         negativeIncrement={negativeIncrement}
                                         totalIncrements={totalIncrements}

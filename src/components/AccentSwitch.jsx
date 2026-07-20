@@ -1,14 +1,15 @@
 import React from 'react';
 
-const AccentSwitch = ({ isOn, onToggle }) => {
+const AccentSwitch = ({ isOn, onToggle, disabled = false }) => {
     return (
         /* items-center centers the children horizontally in the column */
-        <div className="flex flex-col items-center gap-1.5 select-none">
+        <div className={`flex flex-col items-center gap-1.5 select-none ${disabled ? 'opacity-40 pointer-events-none' : ''}`}>
             <span className="text-[10px] font-black tracking-[0.15em] text-white/40 text-center">
                 Accents
             </span>
             <button
                 onClick={onToggle}
+                disabled={disabled}
                 className={`relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
                     isOn ? 'bg-[#FF820C]' : 'bg-white/10'
                 }`}
