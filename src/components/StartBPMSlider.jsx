@@ -1,6 +1,6 @@
 import React, {useRef, useState} from "react";
 
-const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "bpm", defaultValue}) => {
+const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "bpm", defaultValue, disabled = false}) => {
     const k2dStack = {fontFamily: "'K2D', sans-serif"};
 
     const trackRef = useRef(null);
@@ -71,7 +71,7 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
     const btn = "text-[12px] font-black bg-white/5 hover:bg-white/10 border border-white/5 px-2 py-1 rounded transition-colors active:scale-95 text-white";
 
     return (
-        <section className="py-2 select-none">
+        <section className={`py-2 select-none ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="flex justify-between items-center mb-3 text-white/40 tracking-wider">
                 <span className="text-[14px] font-bold" style={k2dStack}>{label}</span>
 
