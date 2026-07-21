@@ -273,10 +273,12 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
                     const restSec = isBarMode ? restVal * settings.timeSigTop * secPerBeat : restVal;
                     restDurationMsRef.current = restSec * 1000;
 
-                    // Count-in at the end of the rest (upcoming tempo) — only if it fits.
+                    // Count-in leading back in, at the upcoming tempo. Use the full
+                    // count-in when it fits; if it doesn't, fill as much of the rest as
+                    // whole beats allow (instead of muting), still ending on the downbeat.
                     const countInBeats = settings.countdownBars * settings.timeSigTop;
-                    const fits = countInBeats > 0 && (countInBeats * secPerBeat) <= restSec;
-                    const scheduled = fits ? countInBeats : 0;
+                    const maxFit = secPerBeat > 0 ? Math.floor(restSec / secPerBeat) : 0;
+                    const scheduled = Math.min(countInBeats, maxFit);
                     // Park the scheduler: silence until the count-in start, then it plays
                     // the count-in and rolls straight into the next interval.
                     nextNoteTimeRef.current = toneNow + (restSec - scheduled * secPerBeat);
