@@ -131,7 +131,7 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
                 )}
             </div>
 
-            <p className="touch-only-hint text-[10px] text-white/25 mt-1.5 text-center tracking-wider" style={k2dStack}>
+            <p className="text-[10px] text-white/25 mt-1.5 text-center tracking-wider" style={k2dStack}>
                 Drag away from the bar for fine control
             </p>
         </section>
