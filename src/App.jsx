@@ -277,7 +277,8 @@ export default function App() {
                     </div>
 
                     <BeatIndicators isActive={isActive} currentBeat={currentBeat}
-                                    beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}/>
+                                    beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}
+                                    isResting={isResting}/>
 
                     <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
                                      isResting={isResting} mode={mode}/>
