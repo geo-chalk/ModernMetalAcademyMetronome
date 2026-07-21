@@ -321,7 +321,7 @@ export default function App() {
                                                   min={30} max={600} step={30}
                                                   displayValue={formatDuration(totalSeconds)} defaultValue={120}/>
                                     <MarkedSlider label="Rest" value={restSeconds} setter={setRestSeconds}
-                                                  min={0} max={60} step={5}
+                                                  min={0} max={360} step={5}
                                                   displayValue={formatDuration(restSeconds)} defaultValue={0}/>
                                 </>) : (<>
                                     <MarkedSlider label="Interval" value={intervalBars} setter={setIntervalBars}
@@ -329,7 +329,7 @@ export default function App() {
                                                   displayValue={`${intervalBars} ${intervalBars === 1 ? 'bar' : 'bars'}`}
                                                   defaultValue={8}/>
                                     <MarkedSlider label="Reps" value={totalReps} setter={setTotalReps}
-                                                  min={2} max={30} step={1}
+                                                  min={1} max={30} step={1}
                                                   displayValue={`${totalReps} reps`} defaultValue={10}/>
                                     <MarkedSlider label="Rest" value={restBars} setter={setRestBars}
                                                   min={0} max={8} step={1}
