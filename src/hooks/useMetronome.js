@@ -13,6 +13,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     const [currentBeat, setCurrentBeat] = useState(1);
     const [stepProgress, setStepProgress] = useState(0);
     const [totalProgress, setTotalProgress] = useState(0);
+    const [isResting, setIsResting] = useState(false);
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
     const [volume, setVolume] = useLocalStorage('metronome_volume', -6);
     const [isAccentEnabled, setIsAccentEnabled] = useLocalStorage('metronome_accents', true);
@@ -26,6 +27,10 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     const playedBeatsRef = useRef(0);      // beats actually heard (bar-mode timing)
     const stepStartBeatRef = useRef(0);    // playedBeats at the start of the current step
     const lastBeatTimeRef = useRef(null);  // audio time of the last played beat (smooth progress)
+    const restingRef = useRef(false);      // currently in a (silent) rest between intervals
+    const restStartTimeRef = useRef(0);    // Date.now() when the current rest began
+    const restDurationMsRef = useRef(0);   // length of the current rest
+    const completedRestMsRef = useRef(0);  // total rest already taken (excluded from playing time)
     const settingsRef = useRef(null);
 
     // --- SCHEDULER REFS ---
@@ -179,6 +184,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
             // in whichever unit is active. Bar mode counts beats actually played
             // (audio-accurate, via playedBeatsRef); time mode uses the wall clock.
             const isBarMode = settings.intervalUnit === 'bars';
+            const restVal = isBarMode ? (settings.restBars || 0) : (settings.restSeconds || 0);
             let stepElapsed, stepThreshold, totalElapsed, totalThreshold;
 
             if (isBarMode) {
@@ -200,12 +206,17 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
                 // Reps = number of intervals played; the last interval's increment
                 // coincides with the stop, so the ramp does (totalReps - 1) increments.
                 totalThreshold = settings.totalReps * stepBeats;
+                // No beats play during a rest, so elapsedBeats naturally freezes then.
                 totalElapsed = elapsedBeats;
             } else {
+                // Rests don't count toward playing time, so the session (Duration) and
+                // the Total bar track playing time only — they pause during a rest.
+                const restAccum = completedRestMsRef.current
+                    + (restingRef.current ? (now - restStartTimeRef.current) : 0);
                 stepThreshold = settings.stepSeconds * 1000;
                 stepElapsed = now - stepStartTimeRef.current;
                 totalThreshold = settings.totalSeconds * 1000;
-                totalElapsed = now - sessionStartTimeRef.current;
+                totalElapsed = (now - sessionStartTimeRef.current) - restAccum;
             }
 
             const newTotalProgress = totalThreshold > 0
@@ -225,19 +236,61 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
                     stop();
                     return;
                 }
+            } else if (restingRef.current) {
+                // REST phase — counted by wall clock. Audio stays silent until the
+                // scheduler's parked count-in (set up in the boundary branch) fires
+                // near the end; the Cycle bar shows the rest filling up.
+                const restElapsed = now - restStartTimeRef.current;
+                if (restElapsed >= restDurationMsRef.current) {
+                    completedRestMsRef.current += restDurationMsRef.current;
+                    restingRef.current = false;
+                    setIsResting(false);
+                    if (isBarMode) stepStartBeatRef.current = playedBeatsRef.current;
+                    else stepStartTimeRef.current = now;
+                    setStepProgress(0);
+                } else {
+                    setStepProgress((restElapsed / restDurationMsRef.current) * 100);
+                }
             } else if (stepElapsed >= stepThreshold) {
-                // Step boundary: advance the step marker and ramp the BPM.
-                if (isBarMode) stepStartBeatRef.current += stepThreshold;
-                else stepStartTimeRef.current = now;
+                // Interval finished: ramp the BPM (see-saw), then rest if one is set.
                 setStepProgress(0);
-                // See-saw ramp: alternate +increment then -negativeIncrement each step.
-                // negativeIncrement is capped at increment (see App.jsx), so net drift is
-                // never negative and BPM can't fall below the start tempo. When it's 0 the
-                // down-steps are skipped entirely, giving a pure monotonic ramp.
                 const negIncr = settings.negativeIncrement || 0;
                 const goingUp = negIncr === 0 || stepCountRef.current % 2 === 0;
-                setBpm(prev => prev + (goingUp ? settings.increment : -negIncr));
+                const newBpm = bpmRef.current + (goingUp ? settings.increment : -negIncr);
+                bpmRef.current = newBpm;   // sync now so a rest count-in uses the new tempo
+                setBpm(newBpm);
                 stepCountRef.current++;
+
+                if (restVal > 0) {
+                    // --- enter REST ---
+                    restingRef.current = true;
+                    setIsResting(true);
+                    setCurrentBeat(0);          // no beat lit while resting
+                    restStartTimeRef.current = now;
+
+                    const beatScale = 4 / settings.timeSigBottom;
+                    const secPerBeat = (60.0 / newBpm) * beatScale;
+                    const restSec = isBarMode ? restVal * settings.timeSigTop * secPerBeat : restVal;
+                    restDurationMsRef.current = restSec * 1000;
+
+                    // Count-in leading back in, at the upcoming tempo. Use the full
+                    // count-in when it fits; if it doesn't, fill as much of the rest as
+                    // whole beats allow (instead of muting), still ending on the downbeat.
+                    const countInBeats = settings.countdownBars * settings.timeSigTop;
+                    const maxFit = secPerBeat > 0 ? Math.floor(restSec / secPerBeat) : 0;
+                    const scheduled = Math.min(countInBeats, maxFit);
+                    // Park the scheduler: silence until the count-in start, then it plays
+                    // the count-in and rolls straight into the next interval.
+                    nextNoteTimeRef.current = toneNow + (restSec - scheduled * secPerBeat);
+                    countdownRemainingRef.current = scheduled;
+                    countdownIndexRef.current = 0;
+                    beatCounterRef.current = 0;    // resumed interval starts on beat 1
+                    lastBeatTimeRef.current = null;
+                } else {
+                    // No rest: roll straight into the next interval.
+                    if (isBarMode) stepStartBeatRef.current += stepThreshold;
+                    else stepStartTimeRef.current = now;
+                }
             } else {
                 setStepProgress((stepElapsed / stepThreshold) * 100);
             }
@@ -250,8 +303,11 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         cancelAnimationFrame(requestRef.current);
         countdownRemainingRef.current = 0;
         countdownIndexRef.current = 0;
+        restingRef.current = false;
+        completedRestMsRef.current = 0;
 
         setIsActive(false);
+        setIsResting(false);
         setCurrentBeat(1);
         setStepProgress(0);
         setTotalProgress(0);
@@ -289,6 +345,9 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         playedBeatsRef.current = 0;
         stepStartBeatRef.current = 0;
         lastBeatTimeRef.current = null;
+        restingRef.current = false;
+        completedRestMsRef.current = 0;
+        setIsResting(false);
 
         // Start scheduler heartbeat
         timerIDRef.current = setInterval(scheduler, SCHEDULE_INTERVAL_MS);
@@ -301,7 +360,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     };
 
     return {
-        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, start, stop,
+        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, start, stop,
         beatsPerMeasure, volume, setVolume, isAccentEnabled, setIsAccentEnabled
     };
 };
