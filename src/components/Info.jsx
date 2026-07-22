@@ -73,6 +73,11 @@ const Info = () => {
                 the bars per step and how many reps to play.</>
         },
         {
+            term: "Rest",
+            desc: <>Optional recovery between intervals (seconds or bars, matching the Interval Type). The metronome
+                goes quiet, a <Em>count-in</Em> leads you back in, and the Cycle bar turns blue.</>
+        },
+        {
             term: "Count-in & Time Signature",
             desc: <>Count-in adds lead-in bars before the session. The time signature and <Em>Accents</Em> toggle
                 set the meter and emphasise the downbeat.</>
@@ -104,6 +109,23 @@ const Info = () => {
         },
     ];
 
+    const sessionGuide = [
+        {
+            term: "Trainer & Constant",
+            desc: <>The toggle up top switches between the two modes, and your tempo carries across both. Switching
+                modes — or opening the menu — stops a running session.</>
+        },
+        {
+            term: "Locked while running",
+            desc: <>During a Trainer session the settings lock so the drill can't shift mid-run; only <Em>Volume</Em>, <Em>Accents</Em>, and
+                the mode switch stay live. Constant mode lets you change the tempo on the fly.</>
+        },
+        {
+            term: "Screen stays awake",
+            desc: <>The screen won't dim or sleep while the metronome is playing.</>
+        },
+    ];
+
     const cycles = [
         {title: "1. Exercise | Cycle One", subtitle: "Top speed minus 20 BPM", details: "2 min burst | +2 BPM every 10s"},
         {title: "2. Exercise | Cycle Two", subtitle: "Cycle One start + 5 BPM", details: "2 min burst | +2 BPM every 10s"},
@@ -128,6 +150,11 @@ const Info = () => {
             {/* Sounds & settings */}
             <Section title="Sounds & Settings">
                 <DefList items={settingsGuide}/>
+            </Section>
+
+            {/* Session behaviours */}
+            <Section title="During a Session">
+                <DefList items={sessionGuide}/>
             </Section>
 
             {/* Practice methodology */}
