@@ -100,6 +100,7 @@ export default function App() {
         stepProgress,
         totalProgress,
         isResting,
+        beatTick,
         start,
         stop,
         beatsPerMeasure,
@@ -278,7 +279,7 @@ export default function App() {
 
                     <BeatIndicators isActive={isActive} currentBeat={currentBeat}
                                     beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}
-                                    isResting={isResting}/>
+                                    isResting={isResting} pulseTick={beatTick}/>
 
                     <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
                                      isResting={isResting} mode={mode}/>

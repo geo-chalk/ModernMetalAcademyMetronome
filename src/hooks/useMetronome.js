@@ -14,6 +14,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     const [stepProgress, setStepProgress] = useState(0);
     const [totalProgress, setTotalProgress] = useState(0);
     const [isResting, setIsResting] = useState(false);
+    const [beatTick, setBeatTick] = useState(0);   // increments each beat — restarts the pulse
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
     const [volume, setVolume] = useLocalStorage('metronome_volume', -6);
     const [isAccentEnabled, setIsAccentEnabled] = useLocalStorage('metronome_accents', true);
@@ -151,7 +152,15 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
                 countdownRemainingRef.current--;
                 advanceTime();
             } else {
-                const currentBeatInLoop = (beatCounterRef.current % settingsRef.current.timeSigTop) + 1;
+                const s = settingsRef.current;
+                // In bars mode with a rest, stop scheduling at the interval boundary so
+                // no main clicks leak into the rest. beatCounterRef resets to 0 each
+                // interval (in the rest branch of animate), so it counts 0..stepBeats-1.
+                if (s.mode === 'trainer' && s.intervalUnit === 'bars' && (s.restBars || 0) > 0
+                    && beatCounterRef.current >= s.intervalBars * s.timeSigTop) {
+                    break;
+                }
+                const currentBeatInLoop = (beatCounterRef.current % s.timeSigTop) + 1;
                 scheduleNote(currentBeatInLoop, nextNoteTimeRef.current);
                 advanceNote();
             }
@@ -165,12 +174,18 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         }
 
         const now = Date.now();
-        const toneNow = Tone.now();
+        const toneNow = Tone.now();          // scheduling clock (includes look-ahead)
+        const audioNow = Tone.immediate();   // actual playback time (no look-ahead) — for visuals
         const settings = settingsRef.current;
 
-        // Visual Sync: Only update the UI beat when the audio time is reached
-        while (notesInQueue.current.length > 0 && notesInQueue.current[0].time < toneNow) {
+        // Visual Sync: fire the beat pulse ~one frame before the click sounds, so that
+        // after React-render + display latency the flash lands *with* the click rather
+        // than a hair late. (VISUAL_LEAD is small — the old ~100ms look-ahead was the
+        // "animation before the sound" bug; this just offsets render latency.)
+        const VISUAL_LEAD = 0.03;
+        while (notesInQueue.current.length > 0 && notesInQueue.current[0].time - VISUAL_LEAD < audioNow) {
             setCurrentBeat(notesInQueue.current[0].beat);
+            setBeatTick(t => t + 1);
             lastBeatTimeRef.current = notesInQueue.current[0].time;
             notesInQueue.current.shift();
             playedBeatsRef.current++;
@@ -197,7 +212,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
                 const beatScale = 4 / settings.timeSigBottom;
                 const secPerBeat = (60.0 / bpmRef.current) * beatScale;
                 const frac = (lastBeatTimeRef.current != null && secPerBeat > 0)
-                    ? Math.min(Math.max((toneNow - lastBeatTimeRef.current) / secPerBeat, 0), 1)
+                    ? Math.min(Math.max((audioNow - lastBeatTimeRef.current) / secPerBeat, 0), 1)
                     : 0;
                 const elapsedBeats = Math.max(0, playedBeatsRef.current - 1 + frac);
 
@@ -308,7 +323,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
 
         setIsActive(false);
         setIsResting(false);
-        setCurrentBeat(1);
+        setCurrentBeat(0);   // 0 = no beat lit (nothing lights during the count-in)
         setStepProgress(0);
         setTotalProgress(0);
         notesInQueue.current = [];
@@ -360,7 +375,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     };
 
     return {
-        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, start, stop,
+        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, beatTick, start, stop,
         beatsPerMeasure, volume, setVolume, isAccentEnabled, setIsAccentEnabled
     };
 };
