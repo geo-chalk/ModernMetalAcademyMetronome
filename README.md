@@ -113,6 +113,11 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
+### 0.5.1 — Timing & animation polish
+* **Beat indicators** reworked into a pop-in pulse that holds until the next beat (smooth, compositor-driven) and stays dark during the count-in.
+* Beat visuals **synced to the actual playback clock** so the flash lands with the click (it was firing slightly early).
+* Fixed a case where a click could **leak into the start of a rest** in bars mode.
+
 ### 0.5.0 — Rest periods
 * **Rest between intervals** (in seconds or bars, matching the Interval Type) — silent recovery with a count-in that leads you back in.
 * Short rests **fill with as many count-in ticks as fit** instead of going silent.

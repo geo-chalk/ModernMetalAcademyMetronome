@@ -46,6 +46,24 @@ html, body {
   width: 100%;
 }
 
+/* Beat indicator: pops in on the beat (a quick scale) and then holds lit until
+   the next beat replaces it. Runs on the compositor via opacity/transform, so
+   it's smooth regardless of React re-renders. */
+@keyframes beat-pulse {
+  0%   { opacity: 1; transform: scaleY(1.3); }
+  100% { opacity: 1; transform: scaleY(1); }
+}
+.beat-pulse,
+.beat-pulse-accent {
+  animation: beat-pulse 140ms ease-out forwards;
+  will-change: opacity, transform;
+}
+.beat-pulse { background-color: #FF820C; }
+.beat-pulse-accent {
+  background-color: #ffffff;
+  box-shadow: 0 0 14px rgba(255, 255, 255, 0.55);
+}
+
 /* Hint that's only useful on touch devices (fine-drag gesture); hidden on
    desktop where a precise pointer + the tap-to-edit BPM already exist. */
 .touch-only-hint {
