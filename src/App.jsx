@@ -6,7 +6,7 @@ import {useKeyboardControls} from './hooks/useKeyboardControls';
 import {useLocalStorage} from './hooks/useLocalStorage';
 import {useWakeLock} from './hooks/useWakeLock';
 import {MIN_TAPS, useTapTempo} from './hooks/useTapTempo';
-import {BPM_MAX, BPM_MIN} from './constants/bpm';
+import {BPM_MAX, BPM_MIN, clampBpm, snapBpm} from './constants/bpm';
 
 // Components
 import MarkedSlider from './components/MarkedSlider';
@@ -156,6 +156,13 @@ export default function App() {
     // (Constant mode stays live-editable so the tempo can be adjusted while playing.)
     const trainerLock = isActive && mode === 'trainer';
 
+    const isSettingsMode = mode === 'info' || mode === 'sound';
+
+    // Tempo shortcuts are inert during a Trainer run (the ramp owns the tempo and
+    // would overwrite anything set) and on the settings screens, where the readout
+    // isn't on screen — silently moving an invisible tempo is worse than a no-op.
+    const tempoKeysEnabled = !trainerLock && !isSettingsMode;
+
     const displayBpm = isActive ? bpm : startBpm;
 
     const displaySetter = useCallback((val) => {
@@ -170,9 +177,24 @@ export default function App() {
     // is — the ramp owns the tempo and would overwrite any tapped value at the next
     // step boundary.
     const {tap: tapTempo, reset: resetTapTempo, tapCount, tapPulse} =
-        useTapTempo(displaySetter, {enabled: !trainerLock});
+        useTapTempo(displaySetter, {enabled: tempoKeysEnabled});
 
-    useKeyboardControls({onSpace: toggleMetronome, onTap: tapTempo});
+    // Arrow nudges and R (snap onto the 5 BPM grid) work off displayBpm, so in
+    // Constant mode they adjust the live tempo and otherwise the stored one.
+    const nudgeBpm = useCallback((delta) => {
+        if (!tempoKeysEnabled) return;
+        displaySetter(clampBpm(displayBpm + delta));
+    }, [tempoKeysEnabled, displaySetter, displayBpm]);
+
+    const snapBpmToGrid = useCallback(() => {
+        if (!tempoKeysEnabled) return;
+        displaySetter(snapBpm(displayBpm));
+    }, [tempoKeysEnabled, displaySetter, displayBpm]);
+
+    useKeyboardControls({
+        onSpace: toggleMetronome, onTap: tapTempo,
+        onNudge: nudgeBpm, onSnap: snapBpmToGrid
+    });
 
     // Keep the negative increment from ever exceeding the positive one,
     // so the see-saw ramp can never lower the net tempo.
@@ -186,8 +208,6 @@ export default function App() {
         const s = sec % 60;
         return m === 0 ? `${s}s` : s === 0 ? `${m}m` : `${m}m ${s}s`;
     };
-
-    const isSettingsMode = mode === 'info' || mode === 'sound';
 
     // Number of interval boundaries the ramp will cross. The engine ramps the BPM
     // (and then rests) at every boundary that falls *before* the session total is

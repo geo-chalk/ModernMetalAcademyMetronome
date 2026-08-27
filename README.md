@@ -40,7 +40,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 * **Screen stays awake** while the metronome is playing (Wake Lock — no permission prompt).
 * **Locked while running** — a Trainer session locks its settings so the drill can't shift mid-run; only Volume, Accents, and the mode switch stay live.
 * **Progress bars** for the current cycle and the whole session; beat indicators go dark during a rest.
-* **Keyboard:** `Space` to start/stop, `T` to tap tempo.
+* **Keyboard:** `Space` to start/stop, `T` to tap tempo, `←`/`→` for ±5 BPM, `↑`/`↓` for ±20, `R` to round to the nearest 5.
 * **Mobile-first**, fixed-viewport, touch-friendly, remembers your settings on the device.
 
 ---
@@ -114,13 +114,21 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
-### 0.6.0 — Tap tempo & total duration
+### 0.6.2 — Tempo keyboard shortcuts
+* **Keyboard tempo control:** `←`/`→` nudge by 5 BPM, `↑`/`↓` by 20 (the same amounts as the slider's quick-jump buttons, now from one shared constant), and `R` rounds the tempo to the nearest 5 — handy after tapping, which lands on values like 137. Holding an arrow repeats.
+* Tempo shortcuts (including `T`) are **inert during a Trainer run and on the settings screens**, where the readout isn't on show.
+
+### 0.6.1 — Total duration & tap hint
+* **Keyboard shortcuts now lead the Info screen** instead of trailing it.
+* A **hint under the BPM readout** that it can be tapped (the "or press `T`" half is desktop-only).
+* **Total session duration shown in both Time and Bars mode** (it was Bars only), and it now includes the rests. In Time mode the **Duration** slider is playing time only — the engine's session clock pauses during a rest — so rests are wall-clock time on top of it. The lead-in count-in is not counted.
+* Fixed an off-by-one in the ramp-step count when Duration isn't an exact multiple of Interval (e.g. 120s / 25s counted 3 steps instead of 4), which also skewed the **BPM Range** readout.
+
+### 0.6.0 — Tap tempo
 * **Tap tempo** on the big BPM number or the `T` key — least-squares fit over a rolling 8-tap window, locking on from the third tap, with outlier rejection and a 2s idle reset. Live tap counter and a per-tap flash on the readout.
 * Typing an exact BPM moved to a **pencil** next to the BPM caption (the number itself is now the tap pad).
 * **Unified BPM range** to 40–300 everywhere — typed values previously allowed 1–400 while the slider was capped at 300.
 * Fixed: `Space` no longer started/stopped the metronome while a dropdown or the BPM field had focus, and no longer auto-repeats when held.
-* **Total session duration shown in both Time and Bars mode** (it was Bars only), and it now includes the rests. In Time mode the **Duration** slider is playing time only — the engine's session clock pauses during a rest — so rests are wall-clock time on top of it. The lead-in count-in is not counted.
-* Fixed an off-by-one in the ramp-step count when Duration isn't an exact multiple of Interval (e.g. 120s / 25s counted 3 steps instead of 4), which also skewed the **BPM Range** readout.
 
 ### 0.5.1 — Timing & animation polish
 * **Beat indicators** reworked into a pop-in pulse that holds until the next beat (smooth, compositor-driven) and stays dark during the count-in.

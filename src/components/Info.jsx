@@ -136,6 +136,9 @@ const Info = () => {
     const shortcuts = [
         {key: "Space", action: "Start / Stop"},
         {key: "T", action: "Tap tempo"},
+        {key: "← →", action: "Tempo ± 5"},
+        {key: "↑ ↓", action: "Tempo ± 20"},
+        {key: "R", action: "Round tempo to nearest 5"},
     ];
 
     return (
