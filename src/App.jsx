@@ -189,29 +189,43 @@ export default function App() {
 
     const isSettingsMode = mode === 'info' || mode === 'sound';
 
-    // Number of BPM changes the ramp will make. In both units the final step
-    // coincides with the session stop, so we subtract one (mirrors the engine).
+    // Number of interval boundaries the ramp will cross. The engine ramps the BPM
+    // (and then rests) at every boundary that falls *before* the session total is
+    // reached — the final boundary coincides with the stop, so it does neither.
+    // Hence one fewer than the number of intervals, and the same count serves for
+    // both the BPM changes and the rests.
     const totalIncrements = intervalUnit === 'bars'
         ? Math.max(0, totalReps - 1)
-        : Math.max(0, Math.floor(totalSeconds / stepSeconds) - 1);
+        : Math.max(0, Math.ceil(totalSeconds / stepSeconds) - 1);
 
-    // Estimated wall-clock length of a bar-mode session. Because the tempo ramps,
-    // each rep's duration depends on its BPM, so we walk the see-saw trajectory
-    // (mirroring the engine) and sum each interval's real time.
-    const barModeSeconds = (() => {
-        if (intervalUnit !== 'bars') return 0;
+    // Estimated length of a whole session: the playing time plus every rest in
+    // between. The lead-in count-in is deliberately excluded — it sits ahead of
+    // the session clock (useMetronome start(): sessionStartTime = now +
+    // countdownDuration) and isn't part of the drill.
+    const sessionSeconds = (() => {
         const beatScale = 4 / timeSigBottom;
-        const beatsPerInterval = intervalBars * timeSigTop;
-        let bpmVal = startBpm;
         let seconds = 0;
-        for (let i = 0; i < totalReps; i++) {
-            seconds += beatsPerInterval * (60 / bpmVal) * beatScale;
-            const goingUp = negativeIncrement === 0 || i % 2 === 0;
-            bpmVal += goingUp ? increment : -negativeIncrement;
-            // Rest after each interval except the last, timed at the upcoming tempo.
-            if (restBars > 0 && i < totalReps - 1) {
-                seconds += restBars * timeSigTop * (60 / bpmVal) * beatScale;
+
+        if (intervalUnit === 'bars') {
+            // Each rep's duration depends on its tempo, so walk the see-saw
+            // trajectory (mirroring the engine) and sum each interval's real time.
+            const beatsPerInterval = intervalBars * timeSigTop;
+            let bpmVal = startBpm;
+            for (let i = 0; i < totalReps; i++) {
+                seconds += beatsPerInterval * (60 / bpmVal) * beatScale;
+                const goingUp = negativeIncrement === 0 || i % 2 === 0;
+                bpmVal += goingUp ? increment : -negativeIncrement;
+                // Rest after each interval except the last, timed at the upcoming tempo.
+                if (restBars > 0 && i < totalReps - 1) {
+                    seconds += restBars * timeSigTop * (60 / bpmVal) * beatScale;
+                }
             }
+        } else {
+            // Duration is playing time only — the engine's session clock subtracts
+            // rest time (useMetronome animate(): totalElapsed -= restAccum), so the
+            // rests are wall-clock time on top of it. Each one is exactly
+            // restSeconds; unlike bar-mode rests they don't scale with the tempo.
+            seconds += totalSeconds + totalIncrements * restSeconds;
         }
         return seconds;
     })();
@@ -361,7 +375,7 @@ export default function App() {
                                         increment={increment}
                                         negativeIncrement={negativeIncrement}
                                         totalIncrements={totalIncrements}
-                                        duration={intervalUnit === 'bars' ? formatDuration(Math.round(barModeSeconds)) : null}
+                                        duration={formatDuration(Math.round(sessionSeconds))}
                                         mode={mode}
                                     />
 

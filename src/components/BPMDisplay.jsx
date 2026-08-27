@@ -118,6 +118,18 @@ const BPMDisplay = ({
                     </button>
                 )}
             </div>
+
+            {/* Discoverability: the readout doesn't look tappable on its own. Fixed
+                height so the hint appearing and disappearing never nudges the layout.
+                The "press T" half is desktop-only — there's no keyboard on touch, and
+                the narrower container can't fit it anyway. */}
+            <div className="h-3">
+                {!locked && !editing && !listening && (
+                    <span className="text-white/25 text-[10px] tracking-wide whitespace-nowrap">
+                        Tap to set tempo<span className="desktop-only"> · or press T</span>
+                    </span>
+                )}
+            </div>
         </div>
     );
 };
