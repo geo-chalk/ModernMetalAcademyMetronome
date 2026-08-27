@@ -5,6 +5,8 @@ import {useMetronome} from './hooks/useMetronome';
 import {useKeyboardControls} from './hooks/useKeyboardControls';
 import {useLocalStorage} from './hooks/useLocalStorage';
 import {useWakeLock} from './hooks/useWakeLock';
+import {MIN_TAPS, useTapTempo} from './hooks/useTapTempo';
+import {BPM_MAX, BPM_MIN} from './constants/bpm';
 
 // Components
 import MarkedSlider from './components/MarkedSlider';
@@ -147,19 +149,30 @@ export default function App() {
         setMode(newMode);
     }, [isActive, handleStop, setMode]);
 
-    useKeyboardControls(toggleMetronome);
-
     // Keep the screen awake while the metronome is playing.
     useWakeLock(isActive);
 
+    // In Trainer mode a running session is locked — no parameter changes mid-drill.
+    // (Constant mode stays live-editable so the tempo can be adjusted while playing.)
+    const trainerLock = isActive && mode === 'trainer';
+
     const displayBpm = isActive ? bpm : startBpm;
 
-    const displaySetter = (val) => {
+    const displaySetter = useCallback((val) => {
         setStartBpm(val);
         // Reflect on the live click only when it should: always in Constant, and
         // in Trainer only before a session starts (a running ramp owns the tempo).
         if (mode === 'constant' || !isActive) setBpm(val);
-    };
+    }, [mode, isActive, setStartBpm, setBpm]);
+
+    // One engine, two surfaces: the BPM pad's pointerdown and the T shortcut both
+    // call `tapTempo`. Disabled during a Trainer run for the same reason the slider
+    // is — the ramp owns the tempo and would overwrite any tapped value at the next
+    // step boundary.
+    const {tap: tapTempo, reset: resetTapTempo, tapCount, tapPulse} =
+        useTapTempo(displaySetter, {enabled: !trainerLock});
+
+    useKeyboardControls({onSpace: toggleMetronome, onTap: tapTempo});
 
     // Keep the negative increment from ever exceeding the positive one,
     // so the see-saw ramp can never lower the net tempo.
@@ -175,10 +188,6 @@ export default function App() {
     };
 
     const isSettingsMode = mode === 'info' || mode === 'sound';
-
-    // In Trainer mode a running session is locked — no parameter changes mid-drill.
-    // (Constant mode stays live-editable so the tempo can be adjusted while playing.)
-    const trainerLock = isActive && mode === 'trainer';
 
     // Number of BPM changes the ramp will make. In both units the final step
     // coincides with the session stop, so we subtract one (mirrors the engine).
@@ -271,7 +280,9 @@ export default function App() {
                         <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
                         <div className="flex-1">
                             <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive}
-                                        locked={trainerLock}/>
+                                        locked={trainerLock}
+                                        onTap={tapTempo} onTapReset={resetTapTempo}
+                                        tapCount={tapCount} tapPulse={tapPulse} minTaps={MIN_TAPS}/>
                         </div>
                         <TimeSignatureSelector top={timeSigTop} bottom={timeSigBottom} setTop={setTimeSigTop}
                                                setBottom={setTimeSigBottom} isActive={isActive}/>
@@ -289,7 +300,7 @@ export default function App() {
                             label={mode === 'trainer' ? "Start BPM" : "Tempo"}
                             value={isActive && mode === 'constant' ? bpm : startBpm}
                             setter={displaySetter}
-                            min={40} max={300} unit="bpm" defaultValue={120}
+                            min={BPM_MIN} max={BPM_MAX} unit="bpm" defaultValue={120}
                             disabled={trainerLock}
                         />
 

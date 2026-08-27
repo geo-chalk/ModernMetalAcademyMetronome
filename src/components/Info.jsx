@@ -50,8 +50,9 @@ const Info = () => {
     const trainerGuide = [
         {
             term: "Set your tempo",
-            desc: <><Em>Tap the big BPM number</Em> to type an exact value, or drag the Start BPM slider — on
-                touch, <Em>drag away from the bar</Em> for finer control.</>
+            desc: <><Em>Tap the big BPM number</Em> in time with the music — or press <Em>T</Em> — and it works out
+                the tempo after three taps. Drag the Start BPM slider to fine-tune (on touch, <Em>drag away from
+                the bar</Em> for finer control), or hit the <Em>pencil</Em> to type an exact value.</>
         },
         {
             term: "Interval Type",
@@ -134,6 +135,7 @@ const Info = () => {
 
     const shortcuts = [
         {key: "Space", action: "Start / Stop"},
+        {key: "T", action: "Tap tempo"},
     ];
 
     return (

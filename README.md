@@ -35,11 +35,12 @@ A professional-grade, high-performance web metronome built for technical guitar 
 * Master **volume** and **accents** available on the main screen and in Sound Config.
 
 ### Experience
-* **Fine-grained BPM slider** — drag across for coarse, drag *away from the bar* for fine control on touch devices; or tap the big number to type an exact value.
+* **Tap tempo** — tap the big BPM number in time with the music, or press `T`. It locks on after three taps, tracks a rolling window of the last 8, rejects fumbled taps, and resets after 2s of silence.
+* **Fine-grained BPM slider** — drag across for coarse, drag *away from the bar* for fine control on touch devices; or hit the pencil to type an exact value.
 * **Screen stays awake** while the metronome is playing (Wake Lock — no permission prompt).
 * **Locked while running** — a Trainer session locks its settings so the drill can't shift mid-run; only Volume, Accents, and the mode switch stay live.
 * **Progress bars** for the current cycle and the whole session; beat indicators go dark during a rest.
-* **Keyboard:** `Space` to start/stop.
+* **Keyboard:** `Space` to start/stop, `T` to tap tempo.
 * **Mobile-first**, fixed-viewport, touch-friendly, remembers your settings on the device.
 
 ---
@@ -47,7 +48,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 ## 🎮 How to Use
 
 1. **Pick a mode** with the toggle at the top — **Trainer** or **Constant**.
-2. **Set the tempo** — tap the big BPM number to type it, or drag the slider (drag away from the bar for fine control).
+2. **Set the tempo** — tap the big BPM number in time with the music (or press `T`), drag the slider to fine-tune (drag away from the bar for finer control), or hit the pencil to type an exact value.
 3. **Trainer setup:**
    * Choose **Interval Type** (Time or Bars).
    * Set **Pos. Increment** (and optionally **Neg. Increment** for a see-saw).
@@ -112,6 +113,12 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 ## 📝 Changelog
 
 Versioning follows the `version` field in `package.json`.
+
+### 0.6.0 — Tap tempo
+* **Tap tempo** on the big BPM number or the `T` key — least-squares fit over a rolling 8-tap window, locking on from the third tap, with outlier rejection and a 2s idle reset. Live tap counter and a per-tap flash on the readout.
+* Typing an exact BPM moved to a **pencil** next to the BPM caption (the number itself is now the tap pad).
+* **Unified BPM range** to 40–300 everywhere — typed values previously allowed 1–400 while the slider was capped at 300.
+* Fixed: `Space` no longer started/stopped the metronome while a dropdown or the BPM field had focus, and no longer auto-repeats when held.
 
 ### 0.5.1 — Timing & animation polish
 * **Beat indicators** reworked into a pop-in pulse that holds until the next beat (smooth, compositor-driven) and stays dark during the count-in.
