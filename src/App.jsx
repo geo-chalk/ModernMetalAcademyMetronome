@@ -5,6 +5,8 @@ import {useMetronome} from './hooks/useMetronome';
 import {useKeyboardControls} from './hooks/useKeyboardControls';
 import {useLocalStorage} from './hooks/useLocalStorage';
 import {useWakeLock} from './hooks/useWakeLock';
+import {MIN_TAPS, useTapTempo} from './hooks/useTapTempo';
+import {BPM_MAX, BPM_MIN, clampBpm, snapBpm} from './constants/bpm';
 
 // Components
 import MarkedSlider from './components/MarkedSlider';
@@ -147,19 +149,52 @@ export default function App() {
         setMode(newMode);
     }, [isActive, handleStop, setMode]);
 
-    useKeyboardControls(toggleMetronome);
-
     // Keep the screen awake while the metronome is playing.
     useWakeLock(isActive);
 
+    // In Trainer mode a running session is locked — no parameter changes mid-drill.
+    // (Constant mode stays live-editable so the tempo can be adjusted while playing.)
+    const trainerLock = isActive && mode === 'trainer';
+
+    const isSettingsMode = mode === 'info' || mode === 'sound';
+
+    // Tempo shortcuts are inert during a Trainer run (the ramp owns the tempo and
+    // would overwrite anything set) and on the settings screens, where the readout
+    // isn't on screen — silently moving an invisible tempo is worse than a no-op.
+    const tempoKeysEnabled = !trainerLock && !isSettingsMode;
+
     const displayBpm = isActive ? bpm : startBpm;
 
-    const displaySetter = (val) => {
+    const displaySetter = useCallback((val) => {
         setStartBpm(val);
         // Reflect on the live click only when it should: always in Constant, and
         // in Trainer only before a session starts (a running ramp owns the tempo).
         if (mode === 'constant' || !isActive) setBpm(val);
-    };
+    }, [mode, isActive, setStartBpm, setBpm]);
+
+    // One engine, two surfaces: the BPM pad's pointerdown and the T shortcut both
+    // call `tapTempo`. Disabled during a Trainer run for the same reason the slider
+    // is — the ramp owns the tempo and would overwrite any tapped value at the next
+    // step boundary.
+    const {tap: tapTempo, reset: resetTapTempo, tapCount, tapPulse} =
+        useTapTempo(displaySetter, {enabled: tempoKeysEnabled});
+
+    // Arrow nudges and R (snap onto the 5 BPM grid) work off displayBpm, so in
+    // Constant mode they adjust the live tempo and otherwise the stored one.
+    const nudgeBpm = useCallback((delta) => {
+        if (!tempoKeysEnabled) return;
+        displaySetter(clampBpm(displayBpm + delta));
+    }, [tempoKeysEnabled, displaySetter, displayBpm]);
+
+    const snapBpmToGrid = useCallback(() => {
+        if (!tempoKeysEnabled) return;
+        displaySetter(snapBpm(displayBpm));
+    }, [tempoKeysEnabled, displaySetter, displayBpm]);
+
+    useKeyboardControls({
+        onSpace: toggleMetronome, onTap: tapTempo,
+        onNudge: nudgeBpm, onSnap: snapBpmToGrid
+    });
 
     // Keep the negative increment from ever exceeding the positive one,
     // so the see-saw ramp can never lower the net tempo.
@@ -174,35 +209,43 @@ export default function App() {
         return m === 0 ? `${s}s` : s === 0 ? `${m}m` : `${m}m ${s}s`;
     };
 
-    const isSettingsMode = mode === 'info' || mode === 'sound';
-
-    // In Trainer mode a running session is locked — no parameter changes mid-drill.
-    // (Constant mode stays live-editable so the tempo can be adjusted while playing.)
-    const trainerLock = isActive && mode === 'trainer';
-
-    // Number of BPM changes the ramp will make. In both units the final step
-    // coincides with the session stop, so we subtract one (mirrors the engine).
+    // Number of interval boundaries the ramp will cross. The engine ramps the BPM
+    // (and then rests) at every boundary that falls *before* the session total is
+    // reached — the final boundary coincides with the stop, so it does neither.
+    // Hence one fewer than the number of intervals, and the same count serves for
+    // both the BPM changes and the rests.
     const totalIncrements = intervalUnit === 'bars'
         ? Math.max(0, totalReps - 1)
-        : Math.max(0, Math.floor(totalSeconds / stepSeconds) - 1);
+        : Math.max(0, Math.ceil(totalSeconds / stepSeconds) - 1);
 
-    // Estimated wall-clock length of a bar-mode session. Because the tempo ramps,
-    // each rep's duration depends on its BPM, so we walk the see-saw trajectory
-    // (mirroring the engine) and sum each interval's real time.
-    const barModeSeconds = (() => {
-        if (intervalUnit !== 'bars') return 0;
+    // Estimated length of a whole session: the playing time plus every rest in
+    // between. The lead-in count-in is deliberately excluded — it sits ahead of
+    // the session clock (useMetronome start(): sessionStartTime = now +
+    // countdownDuration) and isn't part of the drill.
+    const sessionSeconds = (() => {
         const beatScale = 4 / timeSigBottom;
-        const beatsPerInterval = intervalBars * timeSigTop;
-        let bpmVal = startBpm;
         let seconds = 0;
-        for (let i = 0; i < totalReps; i++) {
-            seconds += beatsPerInterval * (60 / bpmVal) * beatScale;
-            const goingUp = negativeIncrement === 0 || i % 2 === 0;
-            bpmVal += goingUp ? increment : -negativeIncrement;
-            // Rest after each interval except the last, timed at the upcoming tempo.
-            if (restBars > 0 && i < totalReps - 1) {
-                seconds += restBars * timeSigTop * (60 / bpmVal) * beatScale;
+
+        if (intervalUnit === 'bars') {
+            // Each rep's duration depends on its tempo, so walk the see-saw
+            // trajectory (mirroring the engine) and sum each interval's real time.
+            const beatsPerInterval = intervalBars * timeSigTop;
+            let bpmVal = startBpm;
+            for (let i = 0; i < totalReps; i++) {
+                seconds += beatsPerInterval * (60 / bpmVal) * beatScale;
+                const goingUp = negativeIncrement === 0 || i % 2 === 0;
+                bpmVal += goingUp ? increment : -negativeIncrement;
+                // Rest after each interval except the last, timed at the upcoming tempo.
+                if (restBars > 0 && i < totalReps - 1) {
+                    seconds += restBars * timeSigTop * (60 / bpmVal) * beatScale;
+                }
             }
+        } else {
+            // Duration is playing time only — the engine's session clock subtracts
+            // rest time (useMetronome animate(): totalElapsed -= restAccum), so the
+            // rests are wall-clock time on top of it. Each one is exactly
+            // restSeconds; unlike bar-mode rests they don't scale with the tempo.
+            seconds += totalSeconds + totalIncrements * restSeconds;
         }
         return seconds;
     })();
@@ -271,7 +314,9 @@ export default function App() {
                         <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
                         <div className="flex-1">
                             <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive}
-                                        locked={trainerLock}/>
+                                        locked={trainerLock}
+                                        onTap={tapTempo} onTapReset={resetTapTempo}
+                                        tapCount={tapCount} tapPulse={tapPulse} minTaps={MIN_TAPS}/>
                         </div>
                         <TimeSignatureSelector top={timeSigTop} bottom={timeSigBottom} setTop={setTimeSigTop}
                                                setBottom={setTimeSigBottom} isActive={isActive}/>
@@ -289,7 +334,7 @@ export default function App() {
                             label={mode === 'trainer' ? "Start BPM" : "Tempo"}
                             value={isActive && mode === 'constant' ? bpm : startBpm}
                             setter={displaySetter}
-                            min={40} max={300} unit="bpm" defaultValue={120}
+                            min={BPM_MIN} max={BPM_MAX} unit="bpm" defaultValue={120}
                             disabled={trainerLock}
                         />
 
@@ -350,7 +395,7 @@ export default function App() {
                                         increment={increment}
                                         negativeIncrement={negativeIncrement}
                                         totalIncrements={totalIncrements}
-                                        duration={intervalUnit === 'bars' ? formatDuration(Math.round(barModeSeconds)) : null}
+                                        duration={formatDuration(Math.round(sessionSeconds))}
                                         mode={mode}
                                     />
 

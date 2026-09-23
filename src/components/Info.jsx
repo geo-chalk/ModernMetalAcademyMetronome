@@ -50,8 +50,9 @@ const Info = () => {
     const trainerGuide = [
         {
             term: "Set your tempo",
-            desc: <><Em>Tap the big BPM number</Em> to type an exact value, or drag the Start BPM slider — on
-                touch, <Em>drag away from the bar</Em> for finer control.</>
+            desc: <><Em>Tap the big BPM number</Em> in time with the music — or press <Em>T</Em> — and it works out
+                the tempo after three taps. Drag the Start BPM slider to fine-tune (on touch, <Em>drag away from
+                the bar</Em> for finer control), or hit the <Em>pencil</Em> to type an exact value.</>
         },
         {
             term: "Interval Type",
@@ -134,10 +135,35 @@ const Info = () => {
 
     const shortcuts = [
         {key: "Space", action: "Start / Stop"},
+        {key: "T", action: "Tap tempo"},
+        {key: "← →", action: "Tempo ± 5"},
+        {key: "↑ ↓", action: "Tempo ± 20"},
+        {key: "R", action: "Round tempo to nearest 5"},
     ];
 
     return (
         <div className="pt-0 pb-8 overflow-y-auto no-scrollbar touch-pan-y">
+            {/* Keyboard shortcuts — only useful with a physical keyboard, so they lead
+                on desktop and are hidden entirely on touch. */}
+            <div className="desktop-only pt-1 pb-5">
+                <div className="flex items-center gap-2 mb-4 text-white">
+                    <Keyboard size={12}/>
+                    <h2 className="text-[14px] font-black tracking-widest uppercase" style={k2dStack}>
+                        Keyboard Shortcuts
+                    </h2>
+                </div>
+                <div className="grid grid-cols-1 gap-2">
+                    {shortcuts.map((s, i) => (
+                        <div key={i} className="flex justify-between items-center text-[14px]">
+                            <span className="text-white/40 uppercase" style={k2dStack}>{s.action}</span>
+                            <span className="bg-white/10 text-white/90 px-2 py-0.5 rounded border border-white/10 font-mono">
+                                {s.key}
+                            </span>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
             <p className="text-white/40 text-[12px] font-bold tracking-wider uppercase pt-1 pb-2" style={k2dStack}>
                 Guide
             </p>
@@ -173,26 +199,6 @@ const Info = () => {
                     ))}
                 </div>
             </Section>
-
-            {/* Keyboard shortcuts — only useful with a physical keyboard */}
-            <div className="desktop-only pt-5">
-                <div className="flex items-center gap-2 mb-4 text-white">
-                    <Keyboard size={12}/>
-                    <h2 className="text-[14px] font-black tracking-widest uppercase" style={k2dStack}>
-                        Keyboard Shortcuts
-                    </h2>
-                </div>
-                <div className="grid grid-cols-1 gap-2">
-                    {shortcuts.map((s, i) => (
-                        <div key={i} className="flex justify-between items-center text-[14px]">
-                            <span className="text-white/40 uppercase" style={k2dStack}>{s.action}</span>
-                            <span className="bg-white/10 text-white/90 px-2 py-0.5 rounded border border-white/10 font-mono">
-                                {s.key}
-                            </span>
-                        </div>
-                    ))}
-                </div>
-            </div>
         </div>
     );
 };

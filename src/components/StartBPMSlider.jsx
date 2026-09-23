@@ -1,4 +1,5 @@
 import React, {useRef, useState} from "react";
+import {BPM_STEP_LARGE, BPM_STEP_SMALL} from "../constants/bpm";
 
 const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "bpm", defaultValue, disabled = false}) => {
     const k2dStack = {fontFamily: "'K2D', sans-serif"};
@@ -76,13 +77,15 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
                 <span className="text-[14px] font-bold" style={k2dStack}>{label}</span>
 
                 <div className="flex items-center gap-2">
-                    <button onClick={() => quickJump(-20)} className={btn} style={k2dStack}>-20</button>
-                    <button onClick={() => quickJump(-5)} className={btn} style={k2dStack}>-5</button>
+                    {/* Same amounts as the arrow-key shortcuts (up/down = large,
+                        left/right = small), from one shared constant. */}
+                    <button onClick={() => quickJump(-BPM_STEP_LARGE)} className={btn} style={k2dStack}>-{BPM_STEP_LARGE}</button>
+                    <button onClick={() => quickJump(-BPM_STEP_SMALL)} className={btn} style={k2dStack}>-{BPM_STEP_SMALL}</button>
                     <span className="text-[16px] text-white font-light min-w-[80px] text-center" style={k2dStack}>
                         {value}{unit}
                     </span>
-                    <button onClick={() => quickJump(5)} className={btn} style={k2dStack}>+5</button>
-                    <button onClick={() => quickJump(20)} className={btn} style={k2dStack}>+20</button>
+                    <button onClick={() => quickJump(BPM_STEP_SMALL)} className={btn} style={k2dStack}>+{BPM_STEP_SMALL}</button>
+                    <button onClick={() => quickJump(BPM_STEP_LARGE)} className={btn} style={k2dStack}>+{BPM_STEP_LARGE}</button>
                 </div>
             </div>
 
