@@ -20,18 +20,21 @@ const isTypingTarget = (el) => {
  *                 BPM_STEP_SMALL, Up/Down by BPM_STEP_LARGE, matching the
  *                 slider's -20/-5/+5/+20 quick-jump buttons.
  * @param onSnap   R — round the BPM onto the BPM_STEP_SMALL grid.
+ * @param onToggleAccents
+ *                 A — flip the accent switch. Bare `A` is safe: Cmd/Ctrl+A is
+ *                 already returned above, so select-all still works.
  */
-export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap} = {}) => {
+export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAccents} = {}) => {
     // Handlers behind a ref so the listener binds exactly once. The previous
     // version listed onSpace as a dependency; because useMetronome's start/stop
     // aren't memoized, handleStop -> toggleMetronome changed identity on every
     // render and the listener was torn down and re-added every render. The BPM
     // handlers close over the current tempo, so they change every nudge — all
     // the more reason to keep them out of the listener's dependencies.
-    const handlersRef = useRef({onSpace, onTap, onNudge, onSnap});
+    const handlersRef = useRef({onSpace, onTap, onNudge, onSnap, onToggleAccents});
     useEffect(() => {
-        handlersRef.current = {onSpace, onTap, onNudge, onSnap};
-    }, [onSpace, onTap, onNudge, onSnap]);
+        handlersRef.current = {onSpace, onTap, onNudge, onSnap, onToggleAccents};
+    }, [onSpace, onTap, onNudge, onSnap, onToggleAccents]);
 
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -46,7 +49,7 @@ export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap} = {}) => {
             // instead of opening its dropdown.
             if (isTypingTarget(event.target) || isTypingTarget(document.activeElement)) return;
 
-            const {onSpace, onTap, onNudge, onSnap} = handlersRef.current;
+            const {onSpace, onTap, onNudge, onSnap, onToggleAccents} = handlersRef.current;
 
             // Every shortcut below is a bare keypress; a modifier means the user
             // wants the browser's own binding (Cmd+R reload, Cmd+T new tab,
@@ -90,6 +93,13 @@ export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap} = {}) => {
                 if (event.repeat) return;   // snapping is idempotent; repeating is just churn
                 event.preventDefault();
                 onSnap();
+                return;
+            }
+
+            if (isKey('a', 'KeyA') && onToggleAccents) {
+                if (event.repeat) return;   // holding A would strobe the switch on/off
+                event.preventDefault();
+                onToggleAccents();
             }
         };
 
