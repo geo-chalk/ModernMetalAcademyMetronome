@@ -138,6 +138,7 @@ const Info = () => {
         {key: "A", action: "Toggle accents"},
         {key: "T", action: "Tap tempo"},
         {key: "← →", action: "Tempo ± 5"},
+        {key: "Shift ← →", action: "Tempo ± 1"},
         {key: "↑ ↓", action: "Tempo ± 20"},
         {key: "R", action: "Round tempo to nearest 5"},
     ];

@@ -1,5 +1,5 @@
 import {useEffect, useRef} from 'react';
-import {BPM_STEP_LARGE, BPM_STEP_SMALL} from '../constants/bpm';
+import {BPM_STEP_FINE, BPM_STEP_LARGE, BPM_STEP_SMALL} from '../constants/bpm';
 
 const isTypingTarget = (el) => {
     if (!el) return false;
@@ -18,7 +18,8 @@ const isTypingTarget = (el) => {
  *                 the rhythmic measurement. `T` is also the DAW convention.
  * @param onNudge  Arrows — called with a BPM delta. Left/Right step by
  *                 BPM_STEP_SMALL, Up/Down by BPM_STEP_LARGE, matching the
- *                 slider's -20/-5/+5/+20 quick-jump buttons.
+ *                 slider's -20/-5/+5/+20 quick-jump buttons; Shift+Left/Right
+ *                 drops to BPM_STEP_FINE.
  * @param onSnap   R — round the BPM onto the BPM_STEP_SMALL grid.
  * @param onToggleAccents
  *                 A — flip the accent switch. Bare `A` is safe: Cmd/Ctrl+A is
@@ -51,9 +52,11 @@ export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAc
 
             const {onSpace, onTap, onNudge, onSnap, onToggleAccents} = handlersRef.current;
 
-            // Every shortcut below is a bare keypress; a modifier means the user
-            // wants the browser's own binding (Cmd+R reload, Cmd+T new tab,
-            // Alt+Arrow history, Shift+Arrow selection).
+            // Ctrl, Cmd and Alt always belong to the browser or the OS (Cmd+R
+            // reload, Cmd+T new tab, Alt+Arrow history, Ctrl+Arrow Mission Control
+            // on macOS), so they're never ours. Shift is deliberately absent: it's
+            // the fine-nudge modifier below, and on the rest of the shortcuts it
+            // just lets the shifted character through.
             if (event.ctrlKey || event.metaKey || event.altKey) return;
 
             if (event.code === 'Space') {
@@ -66,8 +69,17 @@ export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAc
             // Arrow nudges. Auto-repeat is deliberately allowed here — holding an
             // arrow to ramp the tempo is the point, and it's no heavier than
             // dragging the slider, which already fires the setter every pointermove.
+            //
+            // Shift narrows Left/Right to a single BPM, for landing on a tempo off
+            // the 5 BPM grid. Shift rather than Ctrl or Alt because it's the only
+            // modifier actually free: Ctrl+Arrow is macOS's move-a-space binding and
+            // never reaches the page, Alt+Arrow is browser history on Windows and
+            // Linux, Cmd+Arrow is browser history on macOS. Up/Down keep ±20 either
+            // way — a fine step only makes sense against the small one.
+            const fine = event.shiftKey;
             const nudge = {
-                ArrowRight: BPM_STEP_SMALL, ArrowLeft: -BPM_STEP_SMALL,
+                ArrowRight: fine ? BPM_STEP_FINE : BPM_STEP_SMALL,
+                ArrowLeft: fine ? -BPM_STEP_FINE : -BPM_STEP_SMALL,
                 ArrowUp: BPM_STEP_LARGE, ArrowDown: -BPM_STEP_LARGE
             }[event.key];
             if (nudge !== undefined && onNudge) {
