@@ -43,15 +43,19 @@ export default function App() {
     // Shared tempo across Trainer (its start BPM) and Constant (its tempo) — one
     // value, so the tempo carries over when switching between the two modes.
     const [startBpm, setStartBpm] = useLocalStorage('metronome_start_bpm', 120);
-    const [increment, setIncrement] = useState(2);
-    const [negativeIncrement, setNegativeIncrement] = useState(0);
-    const [stepSeconds, setStepSeconds] = useState(10);
-    const [totalSeconds, setTotalSeconds] = useState(120);
+    // The drill itself persists like every other setting. These were plain useState,
+    // so the shape of the drill — the one thing a practice session is actually about
+    // — was the only thing reset by a reload, while the tempo and time signature
+    // around it survived.
+    const [increment, setIncrement] = useLocalStorage('metronome_increment', 2);
+    const [negativeIncrement, setNegativeIncrement] = useLocalStorage('metronome_negative_increment', 0);
+    const [stepSeconds, setStepSeconds] = useLocalStorage('metronome_step_seconds', 10);
+    const [totalSeconds, setTotalSeconds] = useLocalStorage('metronome_total_seconds', 120);
     const [intervalUnit, setIntervalUnit] = useLocalStorage('metronome_interval_unit', 'time');
-    const [intervalBars, setIntervalBars] = useState(8);
-    const [totalReps, setTotalReps] = useState(10);
-    const [restSeconds, setRestSeconds] = useState(0);   // rest between intervals (time mode)
-    const [restBars, setRestBars] = useState(0);         // rest between intervals (bars mode)
+    const [intervalBars, setIntervalBars] = useLocalStorage('metronome_interval_bars', 8);
+    const [totalReps, setTotalReps] = useLocalStorage('metronome_total_reps', 10);
+    const [restSeconds, setRestSeconds] = useLocalStorage('metronome_rest_seconds', 0);   // rest between intervals (time mode)
+    const [restBars, setRestBars] = useLocalStorage('metronome_rest_bars', 0);            // rest between intervals (bars mode)
     const [timeSigTop, setTimeSigTop] = useLocalStorage('top_time_sign', 4);
     const [timeSigBottom, setTimeSigBottom] = useLocalStorage('bottom_time_sign', 4);
     const [countdownBars, setCountdownBars] = useLocalStorage('countdown_bars', 1);

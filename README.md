@@ -114,6 +114,9 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
+### 0.6.5 — The drill persists
+* **Trainer settings survive a reload.** Increment, Neg. Increment, Interval, Duration/Reps and Rest were the only settings not saved to the device, so every refresh reset the drill to the defaults while the tempo and time signature around it stayed put.
+
 ### 0.6.4 — Fine tempo nudge
 * **`Shift` + `←`/`→` nudges by 1 BPM**, for landing on a tempo the 5 BPM grid can't reach. `↑`/`↓` stay at ±20 with or without `Shift`.
 * `Shift` rather than `Ctrl` or `Alt`: it's the only modifier free across platforms. `Ctrl`+arrow is macOS's move-a-space binding and never reaches the page, `Alt`+arrow is browser history on Windows and Linux, `Cmd`+arrow is browser history on macOS. `Shift`+arrow was already falling through as a plain ±5 nudge, so nothing is lost.
