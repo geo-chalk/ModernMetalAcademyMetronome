@@ -55,6 +55,13 @@ const Info = () => {
                 the bar</Em> for finer control), or hit the <Em>pencil</Em> to type an exact value.</>
         },
         {
+            term: "Presets",
+            desc: <>Set a drill up once, then hit the <Em>bookmark</Em> to save it under a name — tempo, ramp,
+                interval, rest, time signature and count-in all travel together. Pick it from the dropdown to
+                load it back. Saving over a name you already used updates that preset. Presets live on this
+                device, not in an account, so they don't follow you to another phone or browser.</>
+        },
+        {
             term: "Interval Type",
             desc: <><Em>Time</Em> speeds up every few seconds. <Em>Bars</Em> speeds up every few bars,
                 staying locked to your playing no matter the tempo.</>
