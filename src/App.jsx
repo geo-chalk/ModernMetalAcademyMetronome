@@ -163,6 +163,12 @@ export default function App() {
     // isn't on screen — silently moving an invisible tempo is worse than a no-op.
     const tempoKeysEnabled = !trainerLock && !isSettingsMode;
 
+    // The accent shortcut is gated differently from the tempo keys: accents are one
+    // of the three controls deliberately left live during a Trainer run, and the
+    // switch is on screen in Sound Config as well as on the main screen. Only Info
+    // has no switch to reflect the change, so that's the one screen it's inert on.
+    const accentKeyEnabled = mode !== 'info';
+
     const displayBpm = isActive ? bpm : startBpm;
 
     const displaySetter = useCallback((val) => {
@@ -191,9 +197,17 @@ export default function App() {
         displaySetter(snapBpm(displayBpm));
     }, [tempoKeysEnabled, displaySetter, displayBpm]);
 
+    // Functional updater, not !isAccentEnabled: it keeps the callback off the
+    // current value, so the handler identity only changes with the gate.
+    const toggleAccents = useCallback(() => {
+        if (!accentKeyEnabled) return;
+        setIsAccentEnabled(on => !on);
+    }, [accentKeyEnabled, setIsAccentEnabled]);
+
     useKeyboardControls({
         onSpace: toggleMetronome, onTap: tapTempo,
-        onNudge: nudgeBpm, onSnap: snapBpmToGrid
+        onNudge: nudgeBpm, onSnap: snapBpmToGrid,
+        onToggleAccents: toggleAccents
     });
 
     // Keep the negative increment from ever exceeding the positive one,

@@ -15,6 +15,11 @@ export const clampBpm = (value) => {
 export const BPM_STEP_SMALL = 5;
 export const BPM_STEP_LARGE = 20;
 
+// Keyboard-only fine step (Shift + Left/Right), for landing on an exact tempo
+// the 5 BPM grid can't reach. Deliberately not mirrored on the slider, which
+// has no room for a fifth quick-jump button.
+export const BPM_STEP_FINE = 1;
+
 // Snap to the nearest multiple of BPM_STEP_SMALL. Tap tempo lands on arbitrary
 // values like 137; this tidies them to the same 5 BPM grid the nudges work on.
 export const snapBpm = (value) =>

@@ -40,7 +40,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 * **Screen stays awake** while the metronome is playing (Wake Lock — no permission prompt).
 * **Locked while running** — a Trainer session locks its settings so the drill can't shift mid-run; only Volume, Accents, and the mode switch stay live.
 * **Progress bars** for the current cycle and the whole session; beat indicators go dark during a rest.
-* **Keyboard:** `Space` to start/stop, `T` to tap tempo, `←`/`→` for ±5 BPM, `↑`/`↓` for ±20, `R` to round to the nearest 5.
+* **Keyboard:** `Space` to start/stop, `A` to toggle accents, `T` to tap tempo, `←`/`→` for ±5 BPM (`Shift` for ±1), `↑`/`↓` for ±20, `R` to round to the nearest 5.
 * **Mobile-first**, fixed-viewport, touch-friendly, remembers your settings on the device.
 
 ---
@@ -113,6 +113,14 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 ## 📝 Changelog
 
 Versioning follows the `version` field in `package.json`.
+
+### 0.6.4 — Fine tempo nudge
+* **`Shift` + `←`/`→` nudges by 1 BPM**, for landing on a tempo the 5 BPM grid can't reach. `↑`/`↓` stay at ±20 with or without `Shift`.
+* `Shift` rather than `Ctrl` or `Alt`: it's the only modifier free across platforms. `Ctrl`+arrow is macOS's move-a-space binding and never reaches the page, `Alt`+arrow is browser history on Windows and Linux, `Cmd`+arrow is browser history on macOS. `Shift`+arrow was already falling through as a plain ±5 nudge, so nothing is lost.
+
+### 0.6.3 — Accent shortcut
+* **`A` toggles accents** from the keyboard, the same switch that sits on the main screen and in Sound Config.
+* Unlike the tempo keys, it **stays live during a Trainer run** — Accents are one of the controls a drill deliberately leaves unlocked. It's inert only on the Info screen, where there's no switch on show to reflect the change.
 
 ### 0.6.2 — Tempo keyboard shortcuts
 * **Keyboard tempo control:** `←`/`→` nudge by 5 BPM, `↑`/`↓` by 20 (the same amounts as the slider's quick-jump buttons, now from one shared constant), and `R` rounds the tempo to the nearest 5 — handy after tapping, which lands on values like 137. Holding an arrow repeats.
