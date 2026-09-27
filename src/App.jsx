@@ -7,6 +7,7 @@ import {useLocalStorage} from './hooks/useLocalStorage';
 import {useWakeLock} from './hooks/useWakeLock';
 import {MIN_TAPS, useTapTempo} from './hooks/useTapTempo';
 import {BPM_MAX, BPM_MIN, clampBpm, snapBpm} from './constants/bpm';
+import {usePresets} from './hooks/usePresets';
 
 // Components
 import MarkedSlider from './components/MarkedSlider';
@@ -23,6 +24,7 @@ import StartBPMSlider from './components/StartBPMSlider';
 import AccentSwitch from './components/AccentSwitch.jsx';
 import SideMenu from './components/SideMenu';
 import SoundConfig from './components/SoundConfig';
+import PresetBar from './components/PresetBar';
 
 
 export default function App() {
@@ -43,15 +45,19 @@ export default function App() {
     // Shared tempo across Trainer (its start BPM) and Constant (its tempo) — one
     // value, so the tempo carries over when switching between the two modes.
     const [startBpm, setStartBpm] = useLocalStorage('metronome_start_bpm', 120);
-    const [increment, setIncrement] = useState(2);
-    const [negativeIncrement, setNegativeIncrement] = useState(0);
-    const [stepSeconds, setStepSeconds] = useState(10);
-    const [totalSeconds, setTotalSeconds] = useState(120);
+    // The drill itself persists like every other setting. These were plain useState,
+    // so the shape of the drill — the one thing a practice session is actually about
+    // — was the only thing reset by a reload, while the tempo and time signature
+    // around it survived.
+    const [increment, setIncrement] = useLocalStorage('metronome_increment', 2);
+    const [negativeIncrement, setNegativeIncrement] = useLocalStorage('metronome_negative_increment', 0);
+    const [stepSeconds, setStepSeconds] = useLocalStorage('metronome_step_seconds', 10);
+    const [totalSeconds, setTotalSeconds] = useLocalStorage('metronome_total_seconds', 120);
     const [intervalUnit, setIntervalUnit] = useLocalStorage('metronome_interval_unit', 'time');
-    const [intervalBars, setIntervalBars] = useState(8);
-    const [totalReps, setTotalReps] = useState(10);
-    const [restSeconds, setRestSeconds] = useState(0);   // rest between intervals (time mode)
-    const [restBars, setRestBars] = useState(0);         // rest between intervals (bars mode)
+    const [intervalBars, setIntervalBars] = useLocalStorage('metronome_interval_bars', 8);
+    const [totalReps, setTotalReps] = useLocalStorage('metronome_total_reps', 10);
+    const [restSeconds, setRestSeconds] = useLocalStorage('metronome_rest_seconds', 0);   // rest between intervals (time mode)
+    const [restBars, setRestBars] = useLocalStorage('metronome_rest_bars', 0);            // rest between intervals (bars mode)
     const [timeSigTop, setTimeSigTop] = useLocalStorage('top_time_sign', 4);
     const [timeSigBottom, setTimeSigBottom] = useLocalStorage('bottom_time_sign', 4);
     const [countdownBars, setCountdownBars] = useLocalStorage('countdown_bars', 1);
@@ -210,6 +216,58 @@ export default function App() {
         onToggleAccents: toggleAccents
     });
 
+    // --- Presets -----------------------------------------------------------
+    // A preset is the drill above under a name. Applying one means driving every
+    // setter at once; the field list and the repair pass both live in
+    // constants/presets.js so this stays a dumb fan-out.
+    const {presets, save: savePreset, load: loadPreset, remove: removePreset, isFull: presetsFull} = usePresets();
+    const [selectedPresetId, setSelectedPresetId] = useState('');
+
+    const handleSelectPreset = useCallback((id) => {
+        setSelectedPresetId(id);
+        if (!id) return;
+
+        const p = loadPreset(id);
+        if (!p) {                       // deleted in another tab between render and click
+            setSelectedPresetId('');
+            return;
+        }
+
+        setStartBpm(p.startBpm);
+        setBpm(p.startBpm);             // the readout shows startBpm while stopped
+        setIncrement(p.increment);
+        setNegativeIncrement(p.negativeIncrement);
+        setIntervalUnit(p.intervalUnit);
+        setStepSeconds(p.stepSeconds);
+        setTotalSeconds(p.totalSeconds);
+        setIntervalBars(p.intervalBars);
+        setTotalReps(p.totalReps);
+        setRestSeconds(p.restSeconds);
+        setRestBars(p.restBars);
+        setTimeSigTop(p.timeSigTop);
+        setTimeSigBottom(p.timeSigBottom);
+        setCountdownBars(p.countdownBars);
+        setLockFinalBpm(p.lockFinalBpm);
+    }, [loadPreset, setStartBpm, setBpm, setIncrement, setNegativeIncrement, setIntervalUnit,
+        setStepSeconds, setTotalSeconds, setIntervalBars, setTotalReps, setRestSeconds,
+        setRestBars, setTimeSigTop, setTimeSigBottom, setCountdownBars, setLockFinalBpm]);
+
+    const handleSavePreset = useCallback((name) => {
+        const saved = savePreset(name, {
+            startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds,
+            intervalBars, totalReps, restSeconds, restBars, timeSigTop, timeSigBottom,
+            countdownBars, lockFinalBpm
+        });
+        if (saved) setSelectedPresetId(saved.id);
+    }, [savePreset, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds,
+        totalSeconds, intervalBars, totalReps, restSeconds, restBars, timeSigTop,
+        timeSigBottom, countdownBars, lockFinalBpm]);
+
+    const handleDeletePreset = useCallback((id) => {
+        removePreset(id);
+        setSelectedPresetId(prev => (prev === id ? '' : prev));
+    }, [removePreset]);
+
     // Keep the negative increment from ever exceeding the positive one,
     // so the see-saw ramp can never lower the net tempo.
     const handleIncrementChange = (val) => {
@@ -355,6 +413,16 @@ export default function App() {
 
                         {mode === 'trainer' && (
                             <div className={`mt-2 pt-4 border-t border-white/5 flex flex-col gap-1 ${isActive ? 'opacity-50 pointer-events-none' : ''}`}>
+                                <PresetBar
+                                    presets={presets}
+                                    selectedId={selectedPresetId}
+                                    onSelect={handleSelectPreset}
+                                    onSave={handleSavePreset}
+                                    onDelete={handleDeletePreset}
+                                    isFull={presetsFull}
+                                    disabled={isActive}
+                                />
+
                                 {/* Interval unit toggle: ramp by wall-clock time or by bars played */}
                                 <div className="flex items-center justify-between mb-2">
                                     <span className="text-[14px] font-bold text-white/40 tracking-wider"

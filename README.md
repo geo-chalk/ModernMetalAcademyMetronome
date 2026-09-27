@@ -15,6 +15,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 * The tempo is **shared** across both modes, so it carries over when you switch. Switching modes (or opening the menu) stops a running session.
 
 ### Trainer ramp controls
+* **Presets** — save a drill under a name and load it back in one tap. A preset carries the whole drill: start tempo, increments, interval, duration/reps, rest, time signature, count-in and Lock Final BPM. Saved on the device (no account, no sync), up to 20 of them.
 * **Interval Type — Time or Bars:**
   * *Time* speeds up every few **seconds**, for a total **Duration**.
   * *Bars* speeds up every few **bars** for a number of **Reps** — staying locked to your playing regardless of tempo.
@@ -113,6 +114,16 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 ## 📝 Changelog
 
 Versioning follows the `version` field in `package.json`.
+
+### 0.7.0 — Trainer presets
+* **Save and load drills by name.** The bar above Interval Type saves the current drill under a name and loads it back; saving over an existing name updates it rather than piling up near-duplicates. Up to 20, inert while a session is running.
+* A preset carries what the drill *is* — tempo, increments, interval, duration/reps, rest, time signature, count-in, Lock Final BPM — and deliberately not how it sounds. Loading one never changes your volume, accents or sound pack.
+* Both the Time-mode and Bars-mode values are stored regardless of which unit is active, so toggling Interval Type after loading doesn't reset the other half.
+* Stored in `localStorage`, like every other setting — this is a static site with no backend, so presets stay on the device they were made on.
+* Every preset is repaired on the way out, not merely on the way in: values are clamped to their slider's range and missing fields fall back to their defaults, so an entry from an older build (or a hand-edited one) loads with one odd value instead of breaking the screen.
+
+### 0.6.5 — The drill persists
+* **Trainer settings survive a reload.** Increment, Neg. Increment, Interval, Duration/Reps and Rest were the only settings not saved to the device, so every refresh reset the drill to the defaults while the tempo and time signature around it stayed put.
 
 ### 0.6.4 — Fine tempo nudge
 * **`Shift` + `←`/`→` nudges by 1 BPM**, for landing on a tempo the 5 BPM grid can't reach. `↑`/`↓` stay at ±20 with or without `Shift`.
