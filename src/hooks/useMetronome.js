@@ -3,11 +3,7 @@ import * as Tone from 'tone';
 import {useLocalStorage} from './useLocalStorage';
 import {SOUND_ASSETS} from '../constants/sounds';
 
-const ACCENT_MAP = {
-    "7/8": [1, 4, 6], "5/8": [1, 4], "6/8": [1, 4], "9/8": [1, 4, 7], "12/8": [1, 4, 7, 10],
-};
-
-export const useMetronome = (initialBpm, initialSoundSettings) => {
+export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPattern) => {
     const [bpm, setBpm] = useState(initialBpm);
     const [isActive, setIsActive] = useState(false);
     const [currentBeat, setCurrentBeat] = useState(1);
@@ -45,6 +41,7 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     const timerIDRef = useRef(null);
 
     const isAccentEnabledRef = useRef(isAccentEnabled);
+    const accentPatternRef = useRef(initialAccentPattern);
     const soundSettingsRef = useRef(initialSoundSettings);
     const bpmRef = useRef(initialBpm);
 
@@ -92,12 +89,16 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
         isAccentEnabledRef.current = isAccentEnabled;
     }, [isAccentEnabled]);
 
+    // The clicked accent pattern, mirrored for the scheduler. Like the accent
+    // switch, it stays live mid-run: the bars are clickable while playing, and
+    // the next scheduled beat should already hear the change.
+    useEffect(() => {
+        accentPatternRef.current = initialAccentPattern;
+    }, [initialAccentPattern]);
+
     // --- CORE SCHEDULER LOGIC ---
     const scheduleNote = (beatNumber, time) => {
-        const settings = settingsRef.current;
-        const sigKey = `${settings.timeSigTop}/${settings.timeSigBottom}`;
-        const accents = ACCENT_MAP[sigKey] || [1];
-        const isAccented = accents.includes(beatNumber);
+        const isAccented = accentPatternRef.current?.includes(beatNumber) ?? false;
 
         // Push to visual queue
         notesInQueue.current.push({beat: beatNumber, time: time});
@@ -129,10 +130,8 @@ export const useMetronome = (initialBpm, initialSoundSettings) => {
     // interrupt it), but it plays the count-in sounds and drives no beat indicator.
     const scheduleCountdownNote = (time) => {
         const settings = settingsRef.current;
-        const sigKey = `${settings.timeSigTop}/${settings.timeSigBottom}`;
-        const accents = ACCENT_MAP[sigKey] || [1];
         const countdownBeat = (countdownIndexRef.current % settings.timeSigTop) + 1;
-        const isAccented = accents.includes(countdownBeat);
+        const isAccented = accentPatternRef.current?.includes(countdownBeat) ?? false;
 
         const source = (isAccentEnabledRef.current && isAccented)
             ? soundSettingsRef.current.countInAccent
