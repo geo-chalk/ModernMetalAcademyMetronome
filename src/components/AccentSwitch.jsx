@@ -10,7 +10,10 @@ const AccentSwitch = ({ isOn, onToggle, disabled = false }) => {
             <button
                 onClick={onToggle}
                 disabled={disabled}
-                className={`relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none ${
+                // The pill is 36x20; the pseudo-element pads the hit box out to ~52x36
+                // without changing how it looks (same idiom as BeatIndicators).
+                className={`relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none
+                            before:absolute before:-inset-2 before:content-[''] ${
                     isOn ? 'bg-[#FF820C]' : 'bg-white/10'
                 }`}
             >

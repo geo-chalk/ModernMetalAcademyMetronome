@@ -43,6 +43,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 * **Progress bars** for the current cycle and the whole session; beat indicators go dark during a rest.
 * **Keyboard:** `Space` to start/stop, `A` to toggle accents, `T` to tap tempo, `←`/`→` for ±5 BPM (`Shift` for ±1), `↑`/`↓` for ±20, `R` to round to the nearest 5.
 * **Mobile-first**, fixed-viewport, touch-friendly, remembers your settings on the device.
+* **Installable** — add it to your home screen and it opens full-screen, without the browser's URL and tab bars.
 
 ---
 
@@ -114,6 +115,14 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 ## 📝 Changelog
 
 Versioning follows the `version` field in `package.json`.
+
+### 0.8.1 — Mobile & desktop polish
+* **Installable.** The icon set that was already in the repo is now wired up, with a web manifest: "Add to Home Screen" gets the logo instead of a page screenshot, and the app opens full-screen without the browser's URL and tab bars. The page padding respects the notch and home-indicator safe areas, so nothing sits under them in standalone or landscape.
+* **Bigger touch targets.** The trainer and volume sliders can be grabbed from a 32px band around the track (a finger more than ~8px off the 6px line used to miss entirely); the BPM pencil, the Accents switch and the Trainer/Constant and Time/Bars toggles have wider hit boxes without looking any different.
+* **No lingering hover on touch.** Tapping a beat bar or a button on a phone no longer leaves it stuck in its hover colour until the next touch — hover styles now apply only where a hovering pointer exists.
+* **No scrollbar through the card.** The settings column's scrollbar was meant to be hidden but the class doing it was never defined, so a native bar drew through the rounded corners on Windows and Linux.
+* **Touchscreen laptops.** Slider touch rules (grab near the thumb, no pointer cursor) are decided per gesture, so a mouse on a touchscreen laptop behaves like a mouse. The "drag away from the bar" hint, a touch gesture, is hidden on desktop where `Shift` + arrows already give ±1.
+* Removed three components nothing rendered any more.
 
 ### 0.8.0 — Clickable accents
 * **Click a beat bar to accent it.** A marked beat turns white and gets the accent sound; click again to clear it. Nothing is locked — the downbeat toggles off like any other beat, so displaced and off-beat accent drills are just a few clicks.
