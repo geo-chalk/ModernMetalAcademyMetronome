@@ -11,6 +11,14 @@ export default {
   ],
   theme: {
     extend: {
+      screens: {
+        // 320px phones need a slightly tighter BPM row and Start BPM row than
+        // 360px-and-up ones; sm (640px) is far too coarse for that.
+        xs: '360px',
+        // Landscape phones: ~375px tall. The header and footer alone took
+        // 280px of it, leaving a 62px window onto the settings column.
+        short: {raw: '(max-height: 500px)'},
+      },
       fontFamily: {
         sans: ['K2D', 'system-ui', '-apple-system', 'sans-serif'],
       },

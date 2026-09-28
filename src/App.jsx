@@ -345,8 +345,8 @@ export default function App() {
             className="bg-[#1E1E1E] w-full max-w-md h-full max-h-full sm:h-auto rounded-2xl border border-white/5 flex flex-col shadow-2xl overflow-hidden">
 
             {/* Header */}
-            <div className="p-4 sm:p-6 pb-1 flex-none flex flex-col gap-4">
-                <div className="flex items-center justify-between">
+            <div className="p-4 sm:p-6 pb-1 flex-none flex flex-col gap-4 short:p-2 short:pb-1 short:flex-row short:items-center short:gap-6">
+                <div className="flex items-center justify-between short:flex-none short:gap-4">
                     <button
                         onClick={() => setIsMenuOpen(true)}
                         className="group p-2 -ml-2 text-white/40 hover:text-white transition-colors flex items-center gap-2"
@@ -378,7 +378,7 @@ export default function App() {
                     )}
                 </div>
 
-                {!isSettingsMode && (<div className="flex items-center justify-between mt-2 px-1">
+                {!isSettingsMode && (<div className="flex items-center justify-between mt-2 px-1 short:flex-1 short:mt-0">
                     <div className="flex-1 max-w-[80%]">
                         <VolumeSlider volume={volume} setVolume={setVolume}/>
                     </div>
@@ -390,7 +390,7 @@ export default function App() {
             </div>
 
             {/* Main Content */}
-            <div className="px-4 sm:px-6 flex-1 overflow-y-auto no-scrollbar flex flex-col touch-pan-y">
+            <div className="px-4 sm:px-6 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col touch-pan-y">
                 {!isSettingsMode ? (<div className="flex-1 flex flex-col justify-center pt-2 pb-4 space-y-3">
                     <div className="flex items-center justify-between mb-0">
                         <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
@@ -482,7 +482,7 @@ export default function App() {
 
                                 {/* Row Container: Component on Left, Button on Right */}
                                 <div
-                                    className="mt-6 pt-3 border-t border-white/5 flex items-center justify-between gap-3">
+                                    className="mt-6 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
 
                                     <BpmRangeDisplay
                                         startBpm={startBpm}
@@ -564,9 +564,9 @@ export default function App() {
 
             {/* Footer */}
             <div
-                className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E]">
+                className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E] short:p-2 short:pt-1.5 short:gap-0">
                 {!isSettingsMode && <PlayButton isActive={isActive} onClick={toggleMetronome}/>}
-                <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase">
+                <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase short:hidden">
                         v{packageJson.version}
                     </span>
             </div>

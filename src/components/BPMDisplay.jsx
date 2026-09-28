@@ -72,7 +72,7 @@ const BPMDisplay = ({
                         if (e.key === 'Escape') setEditing(false);
                     }}
                     style={numberFont}
-                    className="bg-transparent text-white text-7xl font-black text-center w-full focus:outline-none tabular-nums leading-none"
+                    className="bg-transparent text-white text-6xl xs:text-7xl font-black text-center w-full focus:outline-none tabular-nums leading-none"
                 />
             ) : (
                 <button
@@ -80,7 +80,7 @@ const BPMDisplay = ({
                     onPointerDown={handlePointerDown}
                     aria-label="Tap tempo"
                     style={{...numberFont, WebkitTouchCallout: 'none'}}
-                    className={`relative block w-full rounded-2xl bg-transparent text-white text-7xl font-black
+                    className={`relative block w-full rounded-2xl bg-transparent text-white text-6xl xs:text-7xl font-black
                                 text-center tabular-nums leading-none touch-pan-y
                                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40
                                 ${locked ? 'cursor-default' : 'cursor-pointer'}

@@ -205,7 +205,7 @@ const SoundConfig = ({
                                 stopTest();
                                 setActivePack(e.target.value);
                             }}
-                            className="bg-transparent text-white text-sm font-bold focus:outline-none appearance-none pr-6 cursor-pointer uppercase tracking-wider"
+                            className="bg-transparent text-white text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40 appearance-none pr-6 cursor-pointer uppercase tracking-wider"
                             style={k2dStack}
                         >
                             {['synth', 'natural'].map(pack => (
@@ -260,7 +260,7 @@ const SoundConfig = ({
                                             <select
                                                 value={settings[key]}
                                                 onChange={(e) => updateValue(key, e.target.value)}
-                                                className="bg-transparent text-white text-sm font-bold focus:outline-none appearance-none pr-6 cursor-pointer"
+                                                className="bg-transparent text-white text-sm font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40 appearance-none pr-6 cursor-pointer"
                                                 style={k2dStack}
                                             >
                                                 {AVAILABLE_SAMPLES.map(s => <option key={s} value={s}
