@@ -13,6 +13,15 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
     const [dragging, setDragging] = useState(false);
     const [fineFactor, setFineFactor] = useState(1);
 
+    // A touch waiting to show its direction. The track is `touch-pan-y`: a
+    // gesture that starts mostly vertical becomes a scroll of the settings
+    // column (the browser sends pointercancel), one that starts sideways is
+    // ours for the rest of the gesture — including the drag-away fine mode,
+    // since the browser decides once, at the start. Until then nothing is
+    // committed, so a scroll that begins on the bar never jumps the tempo.
+    const pendingRef = useRef(null);
+    const INTENT_PX = 4;
+
     const THUMB = 18; // px
 
     const clamp = (v) => Math.max(min, Math.min(max, v));
@@ -30,23 +39,44 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
 
     const quickJump = (amount) => setter(clamp(value + amount));
 
-    const onPointerDown = (e) => {
-        const track = trackRef.current;
-        if (!track) return;
-        const rect = track.getBoundingClientRect();
-        // Jump to the tapped position (coarse), then drag fine-tunes from there.
-        const posValue = clamp(min + ((e.clientX - rect.left) / rect.width) * (max - min));
+    // Jump to the pressed position (coarse); dragging then fine-tunes from there.
+    const engage = (e, posValue, startX, startY) => {
         accRef.current = posValue;
-        lastXRef.current = e.clientX;
-        startYRef.current = e.clientY;
+        lastXRef.current = startX;
+        startYRef.current = startY;
         draggingRef.current = true;
         setDragging(true);
         setFineFactor(1);
         setter(Math.round(posValue));
-        try { track.setPointerCapture(e.pointerId); } catch { /* noop */ }
+        try { trackRef.current?.setPointerCapture(e.pointerId); } catch { /* noop */ }
+    };
+
+    const onPointerDown = (e) => {
+        const track = trackRef.current;
+        if (!track) return;
+        const rect = track.getBoundingClientRect();
+        const posValue = clamp(min + ((e.clientX - rect.left) / rect.width) * (max - min));
+        if (e.pointerType === 'touch') {
+            pendingRef.current = {x: e.clientX, y: e.clientY, posValue};
+            return;
+        }
+        engage(e, posValue, e.clientX, e.clientY);
     };
 
     const onPointerMove = (e) => {
+        const p = pendingRef.current;
+        if (p) {
+            const dx = Math.abs(e.clientX - p.x);
+            const dy = Math.abs(e.clientY - p.y);
+            if (dx >= INTENT_PX && dx > dy) {
+                pendingRef.current = null;
+                engage(e, p.posValue, p.x, p.y);   // sideways: ours
+                // fall through so this move already contributes to the drag
+            } else {
+                if (dy >= INTENT_PX && dy > dx) pendingRef.current = null;   // the browser scrolls
+                return;
+            }
+        }
         if (!draggingRef.current) return;
         const track = trackRef.current;
         if (!track) return;
@@ -62,6 +92,11 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
     };
 
     const onPointerUp = (e) => {
+        // A touch that never moved is a tap: set the tempo to where it landed.
+        const p = pendingRef.current;
+        pendingRef.current = null;
+        if (p && e.type === 'pointerup') setter(Math.round(p.posValue));
+
         draggingRef.current = false;
         setDragging(false);
         setFineFactor(1);
@@ -95,7 +130,7 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
                 onPointerMove={onPointerMove}
                 onPointerUp={onPointerUp}
                 onPointerCancel={onPointerUp}
-                className="relative w-full h-6 flex items-center touch-none cursor-pointer"
+                className="relative w-full h-6 flex items-center touch-pan-y cursor-pointer"
             >
                 {/* Default value marker */}
                 <div
@@ -134,7 +169,7 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
                 )}
             </div>
 
-            <p className="text-[10px] text-white/25 mt-1.5 text-center tracking-wider" style={k2dStack}>
+            <p className="touch-only-hint text-[10px] text-white/25 mt-1.5 text-center tracking-wider" style={k2dStack}>
                 Drag away from the bar for fine control
             </p>
         </section>

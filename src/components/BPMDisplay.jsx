@@ -81,7 +81,7 @@ const BPMDisplay = ({
                     aria-label="Tap tempo"
                     style={{...numberFont, WebkitTouchCallout: 'none'}}
                     className={`relative block w-full rounded-2xl bg-transparent text-white text-7xl font-black
-                                text-center tabular-nums leading-none touch-none
+                                text-center tabular-nums leading-none touch-pan-y
                                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40
                                 ${locked ? 'cursor-default' : 'cursor-pointer'}
                                 ${listening ? 'ring-1 ring-[#FF820C]/30' : ''}`}
@@ -112,7 +112,9 @@ const BPMDisplay = ({
                         type="button"
                         onClick={beginEdit}
                         aria-label="Type an exact BPM"
-                        className="text-white/25 hover:text-[#FF820C] transition-colors"
+                        // p-2 -m-2: an 11px icon is no touch target; this widens the hit box
+                        // to ~27px without moving anything.
+                        className="p-2 -m-2 text-white/25 hover:text-[#FF820C] transition-colors"
                     >
                         <Pencil size={11}/>
                     </button>

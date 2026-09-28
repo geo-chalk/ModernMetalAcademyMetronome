@@ -97,3 +97,38 @@ html, body {
     display: none;
   }
 }
+/* Scroll columns hide their scrollbar: the card has rounded corners and a
+   native bar (permanent on Windows/Linux) drew straight through them. The
+   class was already on every scroll column but was never defined. */
+.no-scrollbar {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Page padding that never drops below the device's safe area. viewport-fit=cover
+   lets the page run under the notch and the home indicator; in standalone mode
+   the Start button otherwise sits inside the home-indicator band. */
+.safe-pad {
+  padding-top: max(0.5rem, env(safe-area-inset-top));
+  padding-right: max(0.5rem, env(safe-area-inset-right));
+  padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
+  padding-left: max(0.5rem, env(safe-area-inset-left));
+}
+@media (min-width: 640px) {
+  .safe-pad {
+    padding-top: max(1rem, env(safe-area-inset-top));
+    padding-right: max(1rem, env(safe-area-inset-right));
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+    padding-left: max(1rem, env(safe-area-inset-left));
+  }
+}
+/* The side drawer hugs the left edge, so it takes the top/left insets itself. */
+.safe-pad-drawer {
+  padding-top: max(1.5rem, env(safe-area-inset-top));
+  padding-right: 1.5rem;
+  padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  padding-left: max(1.5rem, env(safe-area-inset-left));
+}

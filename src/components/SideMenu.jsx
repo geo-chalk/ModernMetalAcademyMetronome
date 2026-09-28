@@ -16,7 +16,7 @@ const SideMenu = ({ isOpen, onClose, mode, setMode }) => {
             />
 
             {/* Drawer */}
-            <div className={`fixed top-0 left-0 h-full w-64 bg-[#1E1E1E] border-r border-white/10 z-[101] transition-transform duration-300 ease-out p-6 ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+            <div className={`fixed top-0 left-0 h-full w-64 bg-[#1E1E1E] border-r border-white/10 z-[101] transition-transform duration-300 ease-out safe-pad-drawer ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
                 <div className="flex justify-between items-center mb-8">
                     <span className="text-[10px] font-black tracking-widest text-white/40 uppercase">Menu</span>
                     <button onClick={onClose} className="text-white/40 hover:text-white"><X size={20}/></button>

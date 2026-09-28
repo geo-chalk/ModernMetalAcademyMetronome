@@ -333,7 +333,7 @@ export default function App() {
     })();
 
     return (<div
-        className="fixed inset-0 w-full h-[100svh] bg-black text-white flex items-center justify-center overflow-hidden touch-none p-2 sm:p-4">
+        className="fixed inset-0 w-full h-[100svh] bg-black text-white flex items-center justify-center overflow-hidden touch-none safe-pad">
         <SideMenu
             isOpen={isMenuOpen}
             onClose={() => setIsMenuOpen(false)}
@@ -363,7 +363,7 @@ export default function App() {
                                 <button
                                     key={m}
                                     onClick={() => { if (m !== mode) handleMenuSelect(m); }}
-                                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${
                                         mode === m ? 'bg-[#FF820C] text-white' : 'text-white/40 hover:text-white'
                                     }`}
                                 >
@@ -442,7 +442,7 @@ export default function App() {
                                     <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/5">
                                         {['time', 'bars'].map((u) => (
                                             <button key={u} onClick={() => setIntervalUnit(u)}
-                                                    className={`px-3 py-1 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${intervalUnit === u ? 'bg-[#FF820C] text-white' : 'text-white/40 hover:text-white'}`}
+                                                    className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${intervalUnit === u ? 'bg-[#FF820C] text-white' : 'text-white/40 hover:text-white'}`}
                                                     style={{fontFamily: "'K2D', sans-serif"}}>
                                                 {u === 'time' ? 'Time' : 'Bars'}
                                             </button>
