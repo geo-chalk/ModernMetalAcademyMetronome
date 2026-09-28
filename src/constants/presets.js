@@ -1,9 +1,15 @@
 import {clampBpm} from './bpm';
+import {defaultAccentsFor, normaliseAccents} from './accents';
 
 // A preset is the shape of a drill under a name: everything that defines what
 // you're about to practise, and nothing about how it sounds on this device.
-// Volume, accents and the sound pack are deliberately excluded — loading a
-// preset shouldn't change your output level or swap your click.
+// Volume, the accent switch and the sound pack are deliberately excluded —
+// loading a preset shouldn't change your output level or swap your click.
+//
+// The accent *pattern* is on the drill side of that line, unlike the switch that
+// mutes it: which beats you're accenting is part of what you're practising, and
+// it travels with the time signature it belongs to. Restoring a 7/8 drill and
+// getting its meter without its 3+2+2 would be restoring half the drill.
 //
 // Each field carries its own bounds so a stored preset can be repaired rather
 // than trusted: localStorage is editable by hand, survives across versions, and
@@ -54,6 +60,7 @@ export const capturePreset = (state) => {
     out.intervalUnit = state.intervalUnit;
     out.timeSigBottom = state.timeSigBottom;
     out.lockFinalBpm = state.lockFinalBpm;
+    out.accents = state.accents;
     return out;
 };
 
@@ -71,6 +78,13 @@ export const validatePreset = (raw) => {
     out.intervalUnit = INTERVAL_UNITS.includes(raw.intervalUnit) ? raw.intervalUnit : 'time';
     out.timeSigBottom = TIME_SIG_BOTTOMS.includes(Number(raw.timeSigBottom)) ? Number(raw.timeSigBottom) : 4;
     out.lockFinalBpm = raw.lockFinalBpm === true;
+
+    // Tested for the array, not for truthiness: [] is the user having cleared
+    // every accent, and must round-trip as itself. Only a preset from a build
+    // that had no accent pattern at all falls back to the meter's default.
+    out.accents = Array.isArray(raw.accents)
+        ? normaliseAccents(raw.accents, out.timeSigTop)
+        : defaultAccentsFor(out.timeSigTop, out.timeSigBottom);
 
     // The see-saw can never lower the net tempo, so the negative increment is
     // capped by the positive one — the same invariant handleIncrementChange

@@ -27,7 +27,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 
 ### Rhythm & feel
 * **Flexible time signatures**, including irregular meters (5/8, 6/8, 7/8, 9/8, 12/8) with denominators 2–16.
-* **Smart accents** — automatic accent maps for complex meters (e.g. 7/8 accents beats 1, 4, 6); accent toggle for the downbeat.
+* **Clickable accents** — click the beat bars to choose which beats are accented; each time signature keeps its own pattern, and odd meters start from the usual grouping (7/8 on 1, 4, 6). An accent toggle mutes them all without losing the pattern.
 * **Count-in** — 0–4 lead-in bars before a session starts.
 
 ### Sound
@@ -115,9 +115,16 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
+### 0.8.0 — Clickable accents
+* **Click a beat bar to accent it.** A marked beat turns white and gets the accent sound; click again to clear it. Nothing is locked — the downbeat toggles off like any other beat, so displaced and off-beat accent drills are just a few clicks.
+* **A pattern per time signature.** Your 7/8 grouping is kept separately from your 4/4 one, so switching meters and back restores each. A meter you haven't touched starts from the accent map that was hardcoded before — 7/8 on 1, 4, 6 — so nothing changes until you click.
+* **The bars now tell the truth.** The white flash was hardcoded to beat 1 while the audio followed the accent map, so a 7/8 bar *sounded* accents on 1, 4 and 6 but only *flashed* on 1. Both now read from the same pattern.
+* The **Accents toggle (and `A`)** mutes the accents rather than erasing them: the marks dim to a faint outline and come back intact.
+* Presets carry the pattern, alongside the time signature it belongs to. A preset saved by an older build loads with its meter's default rather than breaking.
+
 ### 0.7.0 — Trainer presets
 * **Save and load drills by name.** The bar above Interval Type saves the current drill under a name and loads it back; saving over an existing name updates it rather than piling up near-duplicates. Up to 20, inert while a session is running.
-* A preset carries what the drill *is* — tempo, increments, interval, duration/reps, rest, time signature, count-in, Lock Final BPM — and deliberately not how it sounds. Loading one never changes your volume, accents or sound pack.
+* A preset carries what the drill *is* — tempo, increments, interval, duration/reps, rest, time signature, count-in, Lock Final BPM — and deliberately not how it sounds. Loading one never changes your volume, accent toggle or sound pack. (Since 0.8.0 it also carries the accent pattern, which belongs to the meter rather than to the sound.)
 * Both the Time-mode and Bars-mode values are stored regardless of which unit is active, so toggling Interval Type after loading doesn't reset the other half.
 * Stored in `localStorage`, like every other setting — this is a static site with no backend, so presets stay on the device they were made on.
 * Every preset is repaired on the way out, not merely on the way in: values are clamped to their slider's range and missing fields fall back to their defaults, so an entry from an older build (or a hand-edited one) loads with one odd value instead of breaking the screen.

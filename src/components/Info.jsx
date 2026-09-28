@@ -87,8 +87,14 @@ const Info = () => {
         },
         {
             term: "Count-in & Time Signature",
-            desc: <>Count-in adds lead-in bars before the session. The time signature and <Em>Accents</Em> toggle
-                set the meter and emphasise the downbeat.</>
+            desc: <>Count-in adds lead-in bars before the session. The time signature sets the meter, and
+                the <Em>Accents</Em> toggle mutes or unmutes the accented beats.</>
+        },
+        {
+            term: "Accent pattern",
+            desc: <>Click the beat bars to choose which beats are accented — a marked beat turns white and gets
+                the accent sound. Each time signature keeps its own pattern, odd meters start from the usual
+                grouping (7/8 on 1, 4, 6), and the pattern is saved with a preset.</>
         },
         {
             term: "Lock Final BPM",
@@ -100,7 +106,7 @@ const Info = () => {
         {
             term: "Volume & Accents",
             desc: <>The volume slider and Accents toggle sit on the main screen and in Sound Config. Accents give
-                the first beat of each bar a higher pitch.</>
+                the marked beats of the bar their own sound; the toggle mutes them without losing the pattern.</>
         },
         {
             term: "Sound Pack",

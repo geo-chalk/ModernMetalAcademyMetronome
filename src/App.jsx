@@ -8,6 +8,7 @@ import {useWakeLock} from './hooks/useWakeLock';
 import {MIN_TAPS, useTapTempo} from './hooks/useTapTempo';
 import {BPM_MAX, BPM_MIN, clampBpm, snapBpm} from './constants/bpm';
 import {usePresets} from './hooks/usePresets';
+import {useAccentPattern} from './hooks/useAccentPattern';
 
 // Components
 import MarkedSlider from './components/MarkedSlider';
@@ -100,6 +101,11 @@ export default function App() {
         }
     }, [soundSettings, setSoundSettings]);
 
+    // Which beats of the bar carry the accent — clicked on the beat bars, kept
+    // per time signature. Declared above useMetronome because the engine takes
+    // the pattern; the switch above only decides whether it's heard.
+    const {accents, toggleAccent, setAccentsForSig} = useAccentPattern(timeSigTop, timeSigBottom);
+
     const {
         bpm,
         setBpm,
@@ -116,7 +122,7 @@ export default function App() {
         setVolume,
         isAccentEnabled,
         setIsAccentEnabled
-    } = useMetronome(startBpm, soundSettings[activePack]);
+    } = useMetronome(startBpm, soundSettings[activePack], accents);
 
 
     const handleStart = useCallback(() => {
@@ -248,20 +254,24 @@ export default function App() {
         setTimeSigBottom(p.timeSigBottom);
         setCountdownBars(p.countdownBars);
         setLockFinalBpm(p.lockFinalBpm);
+        // Written against the preset's own signature, not the one on screen —
+        // the setters above haven't taken effect yet at this point.
+        setAccentsForSig(p.timeSigTop, p.timeSigBottom, p.accents);
     }, [loadPreset, setStartBpm, setBpm, setIncrement, setNegativeIncrement, setIntervalUnit,
         setStepSeconds, setTotalSeconds, setIntervalBars, setTotalReps, setRestSeconds,
-        setRestBars, setTimeSigTop, setTimeSigBottom, setCountdownBars, setLockFinalBpm]);
+        setRestBars, setTimeSigTop, setTimeSigBottom, setCountdownBars, setLockFinalBpm,
+        setAccentsForSig]);
 
     const handleSavePreset = useCallback((name) => {
         const saved = savePreset(name, {
             startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds,
             intervalBars, totalReps, restSeconds, restBars, timeSigTop, timeSigBottom,
-            countdownBars, lockFinalBpm
+            countdownBars, lockFinalBpm, accents
         });
         if (saved) setSelectedPresetId(saved.id);
     }, [savePreset, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds,
         totalSeconds, intervalBars, totalReps, restSeconds, restBars, timeSigTop,
-        timeSigBottom, countdownBars, lockFinalBpm]);
+        timeSigBottom, countdownBars, lockFinalBpm, accents]);
 
     const handleDeletePreset = useCallback((id) => {
         removePreset(id);
@@ -396,7 +406,9 @@ export default function App() {
 
                     <BeatIndicators isActive={isActive} currentBeat={currentBeat}
                                     beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}
-                                    isResting={isResting} pulseTick={beatTick}/>
+                                    isResting={isResting} pulseTick={beatTick}
+                                    accents={accents} accentsEnabled={isAccentEnabled}
+                                    onToggleAccent={toggleAccent}/>
 
                     <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
                                      isResting={isResting} mode={mode}/>
