@@ -116,6 +116,11 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
+### 0.8.3 — Two-column Trainer on wide screens
+* **Trainer splits into two columns from 800px wide** — desktops, tablets on their side and most phones in landscape. The readout you watch while playing (tempo, count-in, time signature, beat bars, progress, Start BPM) sits on the left; the drill (presets, interval, increments, rest, range and Lock Final BPM) on the right. Each column scrolls on its own, so the readout never moves while a setting is adjusted — on desktop the settings column used to scroll the tempo out of view.
+* Constant, Info and Sound Config keep the single narrow card; the card widens only when Trainer is showing.
+* In landscape on a phone this combines with the one-row header from 0.8.2. The iPhone SE (667px on its side) stays single-column, being too narrow for two usable ones.
+
 ### 0.8.2 — Small screens, landscape & keyboard focus
 * **320px-wide phones fit.** The BPM row, the Start BPM button row and the Lock Final BPM row each ran 34–47px past the edge of the column. The readout and the count-in/time-signature numbers step down one size below 360px, the quick-jump buttons pack tighter, and the Lock button wraps under the range readout when the two can't share a line. Nothing changes at 360px and up.
 * **Landscape phones are usable.** On a 375px-tall screen the header and footer took 280px between them, leaving a 62px window onto the settings. On short screens the header folds into one row (menu, mode, volume, accents), the version label hides and the Start button slims, so the column gets ~230px and the tempo readout and beat bars stay in view.

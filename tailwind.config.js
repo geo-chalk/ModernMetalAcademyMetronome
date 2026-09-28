@@ -18,6 +18,9 @@ export default {
         // Landscape phones: ~375px tall. The header and footer alone took
         // 280px of it, leaving a 62px window onto the settings column.
         short: {raw: '(max-height: 500px)'},
+        // Two-column Trainer layout: desktops, tablets on their side and most
+        // phones in landscape (iPhone 12+ are 844-932px wide on their side).
+        twocol: {raw: '(min-width: 800px)'},
       },
       fontFamily: {
         sans: ['K2D', 'system-ui', '-apple-system', 'sans-serif'],
