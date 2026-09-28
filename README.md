@@ -118,6 +118,7 @@ Versioning follows the `version` field in `package.json`.
 
 ### 0.8.1 — Mobile & desktop polish
 * **Installable.** The icon set that was already in the repo is now wired up, with a web manifest: "Add to Home Screen" gets the logo instead of a page screenshot, and the app opens full-screen without the browser's URL and tab bars. The page padding respects the notch and home-indicator safe areas, so nothing sits under them in standalone or landscape.
+* **Scroll from anywhere.** Sliders no longer swallow the gesture: a swipe up or down that starts on a slider scrolls the settings column, a sideways drag adjusts the slider, and the drag-away fine control still works once a drag has started sideways. Nothing is committed until the direction is clear, so a scroll that begins on a bar never nudges its value.
 * **Bigger touch targets.** The trainer and volume sliders can be grabbed from a 32px band around the track (a finger more than ~8px off the 6px line used to miss entirely); the BPM pencil, the Accents switch and the Trainer/Constant and Time/Bars toggles have wider hit boxes without looking any different.
 * **No lingering hover on touch.** Tapping a beat bar or a button on a phone no longer leaves it stuck in its hover colour until the next touch — hover styles now apply only where a hovering pointer exists.
 * **No scrollbar through the card.** The settings column's scrollbar was meant to be hidden but the class doing it was never defined, so a native bar drew through the rounded corners on Windows and Linux.
