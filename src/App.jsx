@@ -31,6 +31,8 @@ import PresetBar from './components/PresetBar';
 export default function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [mode, setMode] = useLocalStorage('metronome_app_mode', 'trainer');
+    // Opt out of the two-column Trainer layout on wide screens (side menu).
+    const [forceSingleColumn, setForceSingleColumn] = useLocalStorage('metronome_single_column', false);
     useEffect(() => {
         // Check if this is a new session (not a refresh)
         const hasSeenLanding = sessionStorage.getItem('metronome_session_active');
@@ -169,6 +171,14 @@ export default function App() {
     const trainerLock = isActive && mode === 'trainer';
 
     const isSettingsMode = mode === 'info' || mode === 'sound';
+
+    // Trainer is the only screen with two halves — the readout you watch while
+    // playing and the drill you set up beforehand — so it's the only one that
+    // splits into two columns on a wide viewport (the `twocol` screen). Each
+    // column scrolls on its own, so the readout never moves while a setting is
+    // adjusted. Constant, Info and Sound keep the single narrow card, and the
+    // side menu can pin Trainer to one column as well.
+    const twoCol = mode === 'trainer' && !forceSingleColumn;
 
     // Tempo shortcuts are inert during a Trainer run (the ramp owns the tempo and
     // would overwrite anything set) and on the settings screens, where the readout
@@ -339,14 +349,16 @@ export default function App() {
             onClose={() => setIsMenuOpen(false)}
             mode={mode}
             setMode={handleMenuSelect}
+            forceSingleColumn={forceSingleColumn}
+            onToggleSingleColumn={() => setForceSingleColumn(v => !v)}
         />
 
         <div
-            className="bg-[#1E1E1E] w-full max-w-md h-full max-h-full sm:h-auto rounded-2xl border border-white/5 flex flex-col shadow-2xl overflow-hidden">
+            className={`bg-[#1E1E1E] w-full max-w-md h-full max-h-full sm:h-auto rounded-2xl border border-white/5 flex flex-col shadow-2xl overflow-hidden ${twoCol ? 'twocol:max-w-4xl' : ''}`}>
 
             {/* Header */}
-            <div className="p-4 sm:p-6 pb-1 flex-none flex flex-col gap-4">
-                <div className="flex items-center justify-between">
+            <div className="p-4 sm:p-6 pb-1 flex-none flex flex-col gap-4 short:p-2 short:pb-1 short:flex-row short:items-center short:gap-6">
+                <div className="flex items-center justify-between short:flex-none short:gap-4">
                     <button
                         onClick={() => setIsMenuOpen(true)}
                         className="group p-2 -ml-2 text-white/40 hover:text-white transition-colors flex items-center gap-2"
@@ -378,7 +390,7 @@ export default function App() {
                     )}
                 </div>
 
-                {!isSettingsMode && (<div className="flex items-center justify-between mt-2 px-1">
+                {!isSettingsMode && (<div className="flex items-center justify-between mt-2 px-1 short:flex-1 short:mt-0">
                     <div className="flex-1 max-w-[80%]">
                         <VolumeSlider volume={volume} setVolume={setVolume}/>
                     </div>
@@ -390,8 +402,14 @@ export default function App() {
             </div>
 
             {/* Main Content */}
-            <div className="px-4 sm:px-6 flex-1 overflow-y-auto no-scrollbar flex flex-col touch-pan-y">
-                {!isSettingsMode ? (<div className="flex-1 flex flex-col justify-center pt-2 pb-4 space-y-3">
+            <div className={`px-4 sm:px-6 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col touch-pan-y ${twoCol ? 'twocol:overflow-y-hidden' : ''}`}>
+                {!isSettingsMode ? (<div className={`flex-1 flex flex-col justify-center pt-2 pb-4 space-y-3 ${
+                    twoCol ? 'twocol:grid twocol:grid-cols-2 twocol:grid-rows-[minmax(0,1fr)] twocol:gap-x-6 twocol:space-y-0 twocol:min-h-0 twocol:pb-2' : ''}`}>
+                    {/* Left column: what you watch and touch while playing. `safe center`
+                        rather than plain centering, so a column taller than the card
+                        scrolls from its top instead of clipping it. */}
+                    <div className={`flex flex-col gap-3 ${
+                        twoCol ? 'twocol:min-h-0 twocol:overflow-y-auto twocol:overflow-x-hidden twocol:[justify-content:safe_center] no-scrollbar touch-pan-y' : ''}`}>
                     <div className="flex items-center justify-between mb-0">
                         <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
                         <div className="flex-1">
@@ -413,7 +431,6 @@ export default function App() {
                     <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
                                      isResting={isResting} mode={mode}/>
 
-                    <div className="flex flex-col gap-1">
                         <StartBPMSlider
                             label={mode === 'trainer' ? "Start BPM" : "Tempo"}
                             value={isActive && mode === 'constant' ? bpm : startBpm}
@@ -421,10 +438,14 @@ export default function App() {
                             min={BPM_MIN} max={BPM_MAX} unit="bpm" defaultValue={120}
                             disabled={trainerLock}
                         />
+                    </div>
 
-
+                        {/* Right column: the drill. The dimming during a run sits on an
+                            inner wrapper so the column itself still scrolls. */}
                         {mode === 'trainer' && (
-                            <div className={`mt-2 pt-4 border-t border-white/5 flex flex-col gap-1 ${isActive ? 'opacity-50 pointer-events-none' : ''}`}>
+                            <div className={`pt-4 border-t border-white/5 ${
+                                twoCol ? 'twocol:pt-0 twocol:border-t-0 twocol:border-l twocol:pl-6 twocol:min-h-0 twocol:overflow-y-auto twocol:overflow-x-hidden no-scrollbar touch-pan-y' : ''}`}>
+                              <div className={`flex flex-col gap-1 ${isActive ? 'opacity-50 pointer-events-none' : ''}`}>
                                 <PresetBar
                                     presets={presets}
                                     selectedId={selectedPresetId}
@@ -482,7 +503,7 @@ export default function App() {
 
                                 {/* Row Container: Component on Left, Button on Right */}
                                 <div
-                                    className="mt-6 pt-3 border-t border-white/5 flex items-center justify-between gap-3">
+                                    className="mt-6 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
 
                                     <BpmRangeDisplay
                                         startBpm={startBpm}
@@ -542,10 +563,9 @@ export default function App() {
                                         )}
                                     </button>
                                 </div>
+                              </div>
                             </div>
                         )}
-
-                    </div>
                 </div>) : mode === 'info' ? (<div className="flex-1">
                     <Info/>
                 </div>) : (<div className="flex-1">
@@ -564,9 +584,9 @@ export default function App() {
 
             {/* Footer */}
             <div
-                className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E]">
+                className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E] short:p-2 short:pt-1.5 short:gap-0">
                 {!isSettingsMode && <PlayButton isActive={isActive} onClick={toggleMetronome}/>}
-                <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase">
+                <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase short:hidden">
                         v{packageJson.version}
                     </span>
             </div>
