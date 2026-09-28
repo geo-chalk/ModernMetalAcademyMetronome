@@ -31,6 +31,8 @@ import PresetBar from './components/PresetBar';
 export default function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [mode, setMode] = useLocalStorage('metronome_app_mode', 'trainer');
+    // Opt out of the two-column Trainer layout on wide screens (side menu).
+    const [forceSingleColumn, setForceSingleColumn] = useLocalStorage('metronome_single_column', false);
     useEffect(() => {
         // Check if this is a new session (not a refresh)
         const hasSeenLanding = sessionStorage.getItem('metronome_session_active');
@@ -174,8 +176,9 @@ export default function App() {
     // playing and the drill you set up beforehand — so it's the only one that
     // splits into two columns on a wide viewport (the `twocol` screen). Each
     // column scrolls on its own, so the readout never moves while a setting is
-    // adjusted. Constant, Info and Sound keep the single narrow card.
-    const twoCol = mode === 'trainer';
+    // adjusted. Constant, Info and Sound keep the single narrow card, and the
+    // side menu can pin Trainer to one column as well.
+    const twoCol = mode === 'trainer' && !forceSingleColumn;
 
     // Tempo shortcuts are inert during a Trainer run (the ramp owns the tempo and
     // would overwrite anything set) and on the settings screens, where the readout
@@ -346,6 +349,8 @@ export default function App() {
             onClose={() => setIsMenuOpen(false)}
             mode={mode}
             setMode={handleMenuSelect}
+            forceSingleColumn={forceSingleColumn}
+            onToggleSingleColumn={() => setForceSingleColumn(v => !v)}
         />
 
         <div
