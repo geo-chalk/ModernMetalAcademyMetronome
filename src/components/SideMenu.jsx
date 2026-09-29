@@ -25,13 +25,13 @@ const SideMenu = ({ isOpen, onClose, mode, setMode, forceSingleColumn = false, o
             />
 
             {/* Drawer */}
-            <div className={`fixed top-0 left-0 h-full w-64 twocol:w-72 bg-[#1E1E1E] border-r border-white/10 z-[101] transition-transform duration-300 ease-out safe-pad-drawer ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-                <div className="flex justify-between items-center mb-8">
+            <div className={`fixed top-0 left-0 h-full w-64 twocol:w-72 bg-[#1E1E1E] border-r border-white/10 z-[101] transition-transform duration-300 ease-out safe-pad-drawer overflow-y-auto overflow-x-hidden no-scrollbar touch-pan-y overscroll-contain ${isOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+                <div className="flex justify-between items-center mb-8 short:mb-4">
                     <span className="text-[10px] font-black tracking-widest text-white/40 uppercase">Menu</span>
                     <button onClick={onClose} className="text-white/40 hover:text-white"><X size={20}/></button>
                 </div>
 
-                <nav className="flex flex-col gap-2">
+                <nav className="flex flex-col gap-2 short:gap-1">
                     {[
                         { id: 'trainer', label: 'Trainer', icon: <FastForward size={18}/> },
                         { id: 'constant', label: 'Constant', icon: <InfinityIcon size={18}/> },
@@ -41,7 +41,7 @@ const SideMenu = ({ isOpen, onClose, mode, setMode, forceSingleColumn = false, o
                         <button
                             key={m.id}
                             onClick={() => handleModeChange(m.id)}
-                            className={`flex items-center gap-4 p-4 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${
+                            className={`flex items-center gap-4 p-4 short:p-2.5 rounded-lg font-black uppercase tracking-widest text-xs transition-all ${
                                 mode === m.id ? 'bg-[#FF820C] text-white' : 'text-white/40 hover:bg-white/5'
                             }`}
                         >
@@ -54,7 +54,7 @@ const SideMenu = ({ isOpen, onClose, mode, setMode, forceSingleColumn = false, o
                     the window chrome on desktop; iPhone Safari has no such API, so the
                     row isn't offered there (installing to the home screen is the way).
                     Vertical layout only shows where the two-column Trainer applies. */}
-                <div className={`mt-6 pt-6 border-t border-white/5 ${fullscreen?.supported ? '' : 'hidden twocol:block'}`}>
+                <div className={`mt-6 pt-6 short:mt-3 short:pt-3 border-t border-white/5 ${fullscreen?.supported ? '' : 'hidden twocol:block'}`}>
                         <span className="text-[10px] font-black tracking-widest text-white/40 uppercase">Display</span>
                         {fullscreen?.supported && (
                             <button type="button" onClick={fullscreen.toggle} aria-pressed={fullscreen.active}
