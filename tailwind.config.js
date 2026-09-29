@@ -20,7 +20,9 @@ export default {
         short: {raw: '(max-height: 500px)'},
         // Two-column Trainer layout: desktops, tablets on their side and most
         // phones in landscape (iPhone 12+ are 844-932px wide on their side).
-        twocol: {raw: '(min-width: 800px)'},
+        // Also any short (landscape phone) screen from 640px: two compact
+        // columns beat one column with 170px of height.
+        twocol: {raw: '(min-width: 800px), (min-width: 640px) and (max-height: 500px)'},
       },
       fontFamily: {
         sans: ['K2D', 'system-ui', '-apple-system', 'sans-serif'],

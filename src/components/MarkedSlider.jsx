@@ -68,8 +68,8 @@ const MarkedSlider = ({label, value, setter, min, max, unit, defaultValue, step 
     };
 
     return (
-        <section className="py-2 select-none">
-            <div className="flex justify-between items-center mb-2 text-white/40 tracking-wider">
+        <section className="py-2 short:py-1 select-none">
+            <div className="flex justify-between items-center mb-2 short:mb-1 text-white/40 tracking-wider">
                 <span className="text-[14px] font-bold" style={k2dStack}>
                     {label}
                 </span>

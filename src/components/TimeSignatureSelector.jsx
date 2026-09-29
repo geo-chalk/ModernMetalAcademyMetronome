@@ -3,7 +3,7 @@ import {ChevronDown} from 'lucide-react';
 
 const TimeSignatureSelector = ({top, bottom, setTop, setBottom, isActive}) => {
     return (
-        <div className="flex items-center border-l border-white/10 pl-3 xs:pl-6 h-20">
+        <div className="flex items-center border-l border-white/10 pl-3 xs:pl-6 short:pl-3 h-20 short:h-16">
             <div
                 className={`relative flex flex-col items-center justify-center p-2 rounded-lg transition-all border border-transparent ${
                     !isActive ? 'bg-white/[0.03] hover:bg-white/[0.08] hover:border-white/10 cursor-pointer' : 'opacity-50'
@@ -15,7 +15,7 @@ const TimeSignatureSelector = ({top, bottom, setTop, setBottom, isActive}) => {
                         value={top}
                         onChange={(e) => setTop(Number(e.target.value))}
                         disabled={isActive}
-                        className="bg-transparent text-white text-2xl xs:text-3xl font-black focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40 appearance-none cursor-pointer text-center z-10 pr-4 leading-none"
+                        className="bg-transparent text-white text-2xl xs:text-3xl short:text-xl font-black focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40 appearance-none cursor-pointer text-center z-10 pr-4 leading-none"
                     >
                         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(num => (
                             <option key={num} value={num} className="bg-[#1E1E1E]">{num}</option>
@@ -33,7 +33,7 @@ const TimeSignatureSelector = ({top, bottom, setTop, setBottom, isActive}) => {
                         value={bottom}
                         onChange={(e) => setBottom(Number(e.target.value))}
                         disabled={isActive}
-                        className="bg-transparent text-white text-2xl xs:text-3xl font-black focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40 appearance-none cursor-pointer text-center z-10 pr-4 leading-none"
+                        className="bg-transparent text-white text-2xl xs:text-3xl short:text-xl font-black focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40 appearance-none cursor-pointer text-center z-10 pr-4 leading-none"
                     >
                         {[2, 4, 8, 16].map(num => (
                             <option key={num} value={num} className="bg-[#1E1E1E]">{num}</option>

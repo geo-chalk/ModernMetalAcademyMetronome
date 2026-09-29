@@ -8,9 +8,9 @@ const TrainerProgress = memo(({isActive, progress, totalProgress, isResting, mod
     const cycleColor = isResting ? '#38BDF8' : '#FF820C';
 
     return (
-        <div className="flex flex-col gap-2 py-2">
+        <div className="flex flex-col gap-2 py-2 short:gap-1 short:py-0">
             <div className="w-full">
-                <div className="flex justify-between items-center mb-1 text-white/40 tracking-[0.1em]">
+                <div className="flex justify-between items-center mb-1 short:mb-0.5 text-white/40 tracking-[0.1em]">
                     <span className="text-[12px] font-black" style={robotoStack}>{isResting ? 'Rest' : 'Cycle'}</span>
                     <span className="text-[14px] font-black" style={{...robotoStack, color: cycleColor}}>
             {Math.round(progress)}%
@@ -29,7 +29,7 @@ const TrainerProgress = memo(({isActive, progress, totalProgress, isResting, mod
             </div>
 
             <div className="w-full">
-                <div className="flex justify-between items-center mb-1 text-white/40 tracking-[0.1em]">
+                <div className="flex justify-between items-center mb-1 short:mb-0.5 text-white/40 tracking-[0.1em]">
                     <span className="text-[12px] font-black" style={robotoStack}>Total Session</span>
                     <span className="text-white/60 text-[14px] font-black" style={robotoStack}>
             {Math.round(totalProgress)}%
