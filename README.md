@@ -117,6 +117,9 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
+### 0.8.5 — Menu scrolls on short screens
+* The side menu couldn't scroll, so in landscape on a phone the Fullscreen and Vertical layout rows sat below the bottom edge, out of reach. It scrolls now (it sat inside the page's no-touch-scroll container and never had overflow set), and packs tighter on short screens so less of it needs scrolling.
+
 ### 0.8.4 — Landscape phones & fullscreen
 * **Landscape on a phone is usable.** With the browser's bar showing, a phone on its side leaves about 300px of height, and the readout alone needed more than the 170px the columns got. Every phone now gets the two columns in landscape (from 640px wide on short screens, rather than 800px), and the readout row goes compact: smaller tempo digits and meter numbers, hints hidden, tighter spacing around the beat bars, progress and sliders, the Accents label beside its switch. Tempo, beat bars and both progress bars fit without scrolling.
 * **Menu → Fullscreen** hides Chrome's URL bar on Android and the window chrome on desktop. Browsers require a tap each time, so it isn't remembered. iPhone Safari has no fullscreen for web pages, so the row isn't shown there — adding the app to the home screen is the way to lose the bar on iPhone.

@@ -128,6 +128,7 @@ html, body {
 /* The side drawer hugs the left edge, so it takes the top/left insets itself. */
 .safe-pad-drawer {
   padding-top: max(1.5rem, env(safe-area-inset-top));
+  box-sizing: border-box;
   padding-right: 1.5rem;
   padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
   padding-left: max(1.5rem, env(safe-area-inset-left));
