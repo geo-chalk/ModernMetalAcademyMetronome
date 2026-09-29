@@ -1,7 +1,16 @@
 import React from 'react';
-import { X, FastForward, Infinity as InfinityIcon, Info, Volume2, Rows } from 'lucide-react';
+import { X, FastForward, Infinity as InfinityIcon, Info, Volume2, Rows, Maximize, Minimize } from 'lucide-react';
 
-const SideMenu = ({ isOpen, onClose, mode, setMode, forceSingleColumn = false, onToggleSingleColumn }) => {
+const Switch = ({on}) => (
+    <span className={`relative shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${on ? 'bg-[#FF820C]' : 'bg-white/10'}`}>
+        <span className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform duration-200 ease-out ${on ? 'translate-x-4' : 'translate-x-0'}`}/>
+    </span>
+);
+
+const rowClass = (on) => `mt-2 w-full flex items-center justify-between gap-3 p-3 rounded-lg font-black uppercase tracking-wider text-[11px] transition-all ${
+    on ? 'text-white bg-white/5' : 'text-white/40 hover:bg-white/5'}`;
+
+const SideMenu = ({ isOpen, onClose, mode, setMode, forceSingleColumn = false, onToggleSingleColumn, fullscreen }) => {
     const handleModeChange = (newMode) => {
         setMode(newMode);
         onClose();
@@ -41,30 +50,31 @@ const SideMenu = ({ isOpen, onClose, mode, setMode, forceSingleColumn = false, o
                     ))}
                 </nav>
 
-                {/* Layout: only shown where the two-column Trainer applies (the
-                    `twocol` screen), since below that it changes nothing. */}
-                <div className="hidden twocol:block mt-6 pt-6 border-t border-white/5">
-                    <span className="text-[10px] font-black tracking-widest text-white/40 uppercase">Layout</span>
-                    <button
-                        type="button"
-                        onClick={onToggleSingleColumn}
-                        aria-pressed={forceSingleColumn}
-                        className={`mt-2 w-full flex items-center justify-between gap-3 p-3 rounded-lg font-black uppercase tracking-wider text-[11px] transition-all ${
-                            forceSingleColumn ? 'text-white bg-white/5' : 'text-white/40 hover:bg-white/5'
-                        }`}
-                    >
-                        <span className="flex items-center gap-3"><Rows size={18}/> Vertical layout</span>
-                        <span className={`relative shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${
-                            forceSingleColumn ? 'bg-[#FF820C]' : 'bg-white/10'
-                        }`}>
-                            <span className={`absolute top-1 left-1 bg-white w-3 h-3 rounded-full transition-transform duration-200 ease-out ${
-                                forceSingleColumn ? 'translate-x-4' : 'translate-x-0'
-                            }`}/>
-                        </span>
-                    </button>
-                    <p className="text-[10px] text-white/25 mt-2 leading-relaxed">
-                        Keep the Trainer in one column on wide screens.
-                    </p>
+                {/* Display. Fullscreen hides the browser's URL bar on Android Chrome and
+                    the window chrome on desktop; iPhone Safari has no such API, so the
+                    row isn't offered there (installing to the home screen is the way).
+                    Vertical layout only shows where the two-column Trainer applies. */}
+                <div className={`mt-6 pt-6 border-t border-white/5 ${fullscreen?.supported ? '' : 'hidden twocol:block'}`}>
+                        <span className="text-[10px] font-black tracking-widest text-white/40 uppercase">Display</span>
+                        {fullscreen?.supported && (
+                            <button type="button" onClick={fullscreen.toggle} aria-pressed={fullscreen.active}
+                                    className={rowClass(fullscreen.active)}>
+                                <span className="flex items-center gap-3">
+                                    {fullscreen.active ? <Minimize size={18}/> : <Maximize size={18}/>} Fullscreen
+                                </span>
+                                <Switch on={fullscreen.active}/>
+                            </button>
+                        )}
+                        <div className="hidden twocol:block">
+                            <button type="button" onClick={onToggleSingleColumn} aria-pressed={forceSingleColumn}
+                                    className={rowClass(forceSingleColumn)}>
+                                <span className="flex items-center gap-3"><Rows size={18}/> Vertical layout</span>
+                                <Switch on={forceSingleColumn}/>
+                            </button>
+                            <p className="text-[10px] text-white/25 mt-2 leading-relaxed">
+                                Keep the Trainer in one column on wide screens.
+                            </p>
+                        </div>
                 </div>
             </div>
         </>

@@ -8,7 +8,7 @@ const BeatIndicators = memo(({
     const playing = isActive && !isResting;
 
     return (
-        <div className="flex justify-center gap-2 mb-4 h-4">
+        <div className="flex justify-center gap-2 mb-4 short:mb-0 h-4">
             {beats.map((b) => {
                 const accented = accents.includes(b);
                 // The mark dims rather than disappearing when accents are switched

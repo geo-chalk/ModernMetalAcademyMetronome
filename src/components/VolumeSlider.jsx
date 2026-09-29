@@ -3,7 +3,7 @@ import {Volume2} from 'lucide-react';
 
 const VolumeSlider = ({volume, setVolume}) => {
     return (
-        <div className="flex items-center gap-3 px-1 mt-2 opacity-100">
+        <div className="flex items-center gap-3 px-1 mt-2 short:mt-0 opacity-100">
             <Volume2 size={14} className="text-white"/>
             {/* Same construction as MarkedSlider: a tall transparent input for the
                 hit box over a separately drawn 4px track. */}

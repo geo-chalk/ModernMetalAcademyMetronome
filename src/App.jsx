@@ -5,6 +5,7 @@ import {useMetronome} from './hooks/useMetronome';
 import {useKeyboardControls} from './hooks/useKeyboardControls';
 import {useLocalStorage} from './hooks/useLocalStorage';
 import {useWakeLock} from './hooks/useWakeLock';
+import {useFullscreen} from './hooks/useFullscreen';
 import {MIN_TAPS, useTapTempo} from './hooks/useTapTempo';
 import {BPM_MAX, BPM_MIN, clampBpm, snapBpm} from './constants/bpm';
 import {usePresets} from './hooks/usePresets';
@@ -33,6 +34,7 @@ export default function App() {
     const [mode, setMode] = useLocalStorage('metronome_app_mode', 'trainer');
     // Opt out of the two-column Trainer layout on wide screens (side menu).
     const [forceSingleColumn, setForceSingleColumn] = useLocalStorage('metronome_single_column', false);
+    const fullscreen = useFullscreen();
     useEffect(() => {
         // Check if this is a new session (not a refresh)
         const hasSeenLanding = sessionStorage.getItem('metronome_session_active');
@@ -351,6 +353,7 @@ export default function App() {
             setMode={handleMenuSelect}
             forceSingleColumn={forceSingleColumn}
             onToggleSingleColumn={() => setForceSingleColumn(v => !v)}
+            fullscreen={fullscreen}
         />
 
         <div
@@ -403,12 +406,14 @@ export default function App() {
 
             {/* Main Content */}
             <div className={`px-4 sm:px-6 flex-1 overflow-y-auto overflow-x-hidden no-scrollbar flex flex-col touch-pan-y ${twoCol ? 'twocol:overflow-y-hidden' : ''}`}>
-                {!isSettingsMode ? (<div className={`flex-1 flex flex-col justify-center pt-2 pb-4 space-y-3 ${
+                {!isSettingsMode ? (<div className={`flex-1 flex flex-col justify-center pt-2 pb-4 space-y-3 short:pt-1 short:pb-1 short:space-y-1 ${
                     twoCol ? 'twocol:grid twocol:grid-cols-2 twocol:grid-rows-[minmax(0,1fr)] twocol:gap-x-6 twocol:space-y-0 twocol:min-h-0 twocol:pb-2' : ''}`}>
                     {/* Left column: what you watch and touch while playing. `safe center`
                         rather than plain centering, so a column taller than the card
-                        scrolls from its top instead of clipping it. */}
-                    <div className={`flex flex-col gap-3 ${
+                        scrolls from its top instead of clipping it. The children must not
+                        flex-shrink: the beat-bar row has no intrinsic height, and a
+                        height-constrained column would squash it to nothing. */}
+                    <div className={`flex flex-col gap-3 short:gap-1 [&>*]:shrink-0 ${
                         twoCol ? 'twocol:min-h-0 twocol:overflow-y-auto twocol:overflow-x-hidden twocol:[justify-content:safe_center] no-scrollbar touch-pan-y' : ''}`}>
                     <div className="flex items-center justify-between mb-0">
                         <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
@@ -503,7 +508,7 @@ export default function App() {
 
                                 {/* Row Container: Component on Left, Button on Right */}
                                 <div
-                                    className="mt-6 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                                    className="mt-6 short:mt-3 pt-3 border-t border-white/5 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
 
                                     <BpmRangeDisplay
                                         startBpm={startBpm}
@@ -584,7 +589,7 @@ export default function App() {
 
             {/* Footer */}
             <div
-                className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E] short:p-2 short:pt-1.5 short:gap-0">
+                className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E] short:px-2 short:py-1 short:gap-0">
                 {!isSettingsMode && <PlayButton isActive={isActive} onClick={toggleMetronome}/>}
                 <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase short:hidden">
                         v{packageJson.version}

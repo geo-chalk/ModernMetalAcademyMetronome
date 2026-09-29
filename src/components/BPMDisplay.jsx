@@ -55,7 +55,7 @@ const BPMDisplay = ({
     };
 
     return (
-        <div className="text-center mb-2 select-none">
+        <div className="text-center mb-2 short:mb-0 select-none">
             {editing ? (
                 <input
                     type="number"
@@ -72,7 +72,7 @@ const BPMDisplay = ({
                         if (e.key === 'Escape') setEditing(false);
                     }}
                     style={numberFont}
-                    className="bg-transparent text-white text-6xl xs:text-7xl font-black text-center w-full focus:outline-none tabular-nums leading-none"
+                    className="bg-transparent text-white text-6xl xs:text-7xl short:text-5xl font-black text-center w-full focus:outline-none tabular-nums leading-none"
                 />
             ) : (
                 <button
@@ -80,7 +80,7 @@ const BPMDisplay = ({
                     onPointerDown={handlePointerDown}
                     aria-label="Tap tempo"
                     style={{...numberFont, WebkitTouchCallout: 'none'}}
-                    className={`relative block w-full rounded-2xl bg-transparent text-white text-6xl xs:text-7xl font-black
+                    className={`relative block w-full rounded-2xl bg-transparent text-white text-6xl xs:text-7xl short:text-5xl font-black
                                 text-center tabular-nums leading-none touch-pan-y
                                 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40
                                 ${locked ? 'cursor-default' : 'cursor-pointer'}
@@ -99,7 +99,7 @@ const BPMDisplay = ({
 
             {/* Fixed height so the caption swapping between BPM and the tap counter
                 never shifts the layout. */}
-            <div className="mt-2 h-4 flex items-center justify-center gap-2">
+            <div className="mt-2 short:mt-1 h-4 flex items-center justify-center gap-2">
                 {listening ? (
                     <span className="text-[#FF820C] uppercase tracking-[0.2em] text-xs font-bold tabular-nums">
                         {tapCount < minTaps ? `Tap ${tapCount}/${minTaps}` : `Tap ×${tapCount}`}
@@ -125,7 +125,7 @@ const BPMDisplay = ({
                 height so the hint appearing and disappearing never nudges the layout.
                 The "press T" half is desktop-only — there's no keyboard on touch, and
                 the narrower container can't fit it anyway. */}
-            <div className="h-3">
+            <div className="h-3 short:hidden">
                 {!locked && !editing && !listening && (
                     <span className="text-white/25 text-[10px] tracking-wide whitespace-nowrap">
                         Tap to set tempo<span className="desktop-only"> · or press T</span>

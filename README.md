@@ -44,6 +44,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 * **Keyboard:** `Space` to start/stop, `A` to toggle accents, `T` to tap tempo, `←`/`→` for ±5 BPM (`Shift` for ±1), `↑`/`↓` for ±20, `R` to round to the nearest 5.
 * **Mobile-first**, fixed-viewport, touch-friendly, remembers your settings on the device.
 * **Installable** — add it to your home screen and it opens full-screen, without the browser's URL and tab bars.
+* **Fullscreen** from the menu on Android and desktop, for the same effect without installing.
 
 ---
 
@@ -115,6 +116,10 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 ## 📝 Changelog
 
 Versioning follows the `version` field in `package.json`.
+
+### 0.8.4 — Landscape phones & fullscreen
+* **Landscape on a phone is usable.** With the browser's bar showing, a phone on its side leaves about 300px of height, and the readout alone needed more than the 170px the columns got. Every phone now gets the two columns in landscape (from 640px wide on short screens, rather than 800px), and the readout row goes compact: smaller tempo digits and meter numbers, hints hidden, tighter spacing around the beat bars, progress and sliders, the Accents label beside its switch. Tempo, beat bars and both progress bars fit without scrolling.
+* **Menu → Fullscreen** hides Chrome's URL bar on Android and the window chrome on desktop. Browsers require a tap each time, so it isn't remembered. iPhone Safari has no fullscreen for web pages, so the row isn't shown there — adding the app to the home screen is the way to lose the bar on iPhone.
 
 ### 0.8.3 — Two-column Trainer on wide screens
 * **Trainer splits into two columns from 800px wide** — desktops, tablets on their side and most phones in landscape. The readout you watch while playing (tempo, count-in, time signature, beat bars, progress, Start BPM) sits on the left; the drill (presets, interval, increments, rest, range and Lock Final BPM) on the right. Each column scrolls on its own, so the readout never moves while a setting is adjusted — on desktop the settings column used to scroll the tempo out of view.

@@ -104,19 +104,19 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
         if (track) { try { track.releasePointerCapture(e.pointerId); } catch { /* noop */ } }
     };
 
-    const btn = "text-[12px] font-black bg-white/5 hover:bg-white/10 border border-white/5 px-1.5 xs:px-2 py-1 rounded transition-colors active:scale-95 text-white";
+    const btn = "text-[12px] font-black bg-white/5 hover:bg-white/10 border border-white/5 px-1.5 xs:px-2 short:px-1.5 py-1 rounded transition-colors active:scale-95 text-white";
 
     return (
-        <section className={`py-2 select-none ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
-            <div className="flex justify-between items-center mb-3 text-white/40 tracking-wider">
+        <section className={`py-2 short:py-1 select-none ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
+            <div className="flex justify-between items-center mb-3 short:mb-1 text-white/40 tracking-wider">
                 <span className="text-[14px] font-bold" style={k2dStack}>{label}</span>
 
-                <div className="flex items-center gap-1 xs:gap-2">
+                <div className="flex items-center gap-1 xs:gap-2 short:gap-1">
                     {/* Same amounts as the arrow-key shortcuts (up/down = large,
                         left/right = small), from one shared constant. */}
                     <button onClick={() => quickJump(-BPM_STEP_LARGE)} className={btn} style={k2dStack}>-{BPM_STEP_LARGE}</button>
                     <button onClick={() => quickJump(-BPM_STEP_SMALL)} className={btn} style={k2dStack}>-{BPM_STEP_SMALL}</button>
-                    <span className="text-[16px] text-white font-light min-w-[64px] xs:min-w-[80px] text-center" style={k2dStack}>
+                    <span className="text-[16px] text-white font-light min-w-[64px] xs:min-w-[80px] short:min-w-[64px] text-center" style={k2dStack}>
                         {value}{unit}
                     </span>
                     <button onClick={() => quickJump(BPM_STEP_SMALL)} className={btn} style={k2dStack}>+{BPM_STEP_SMALL}</button>
@@ -169,7 +169,7 @@ const StartBPMSlider = ({label = "Start BPM", value, setter, min, max, unit = "b
                 )}
             </div>
 
-            <p className="touch-only-hint text-[10px] text-white/25 mt-1.5 text-center tracking-wider" style={k2dStack}>
+            <p className="touch-only-hint short:!hidden text-[10px] text-white/25 mt-1.5 text-center tracking-wider" style={k2dStack}>
                 Drag away from the bar for fine control
             </p>
         </section>
