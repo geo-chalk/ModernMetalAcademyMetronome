@@ -7,6 +7,21 @@ const isTypingTarget = (el) => {
     return tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA' || el.isContentEditable === true;
 };
 
+// A slider or dropdown the mouse has just finished with keeps keyboard focus, and
+// from then on the arrow keys belong to it: they nudge that slider (or step that
+// select) natively, and the handler below stands aside because the focused element is
+// an <input>/<select>. So after dragging the volume, the arrows moved the volume and
+// never the tempo. Handing focus back once the pointer is done fixes both at once:
+// the highlight goes and the arrows reach the tempo again. Keyboard use is untouched,
+// since Tab-focusing a slider involves no pointer and its arrows keep working on it.
+const releaseSliderFocus = (event) => {
+    const el = event.target;
+    if (el instanceof HTMLInputElement && el.type === 'range') el.blur();
+};
+const releaseSelectFocus = (event) => {
+    if (event.target instanceof HTMLSelectElement) event.target.blur();
+};
+
 /**
  * The app's single window-level keydown listener.
  *
@@ -125,6 +140,12 @@ export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAc
         };
 
         window.addEventListener('keydown', handleKeyDown);
-        return () => window.removeEventListener('keydown', handleKeyDown);
+        window.addEventListener('pointerup', releaseSliderFocus);
+        window.addEventListener('change', releaseSelectFocus);
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+            window.removeEventListener('pointerup', releaseSliderFocus);
+            window.removeEventListener('change', releaseSelectFocus);
+        };
     }, []);
 };
