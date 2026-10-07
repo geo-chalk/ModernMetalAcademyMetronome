@@ -1,4 +1,4 @@
-import React, {useCallback, useState, useEffect} from 'react';
+import React, {useCallback, useMemo, useState, useEffect} from 'react';
 import {Menu} from 'lucide-react'; // Fixed: Correctly importing Menu icon
 import packageJson from '../package.json';
 import {useMetronome} from './hooks/useMetronome';
@@ -16,6 +16,7 @@ import MarkedSlider from './components/MarkedSlider';
 import BeatIndicators from './components/BeatIndicators';
 import BPMDisplay from './components/BPMDisplay';
 import TrainerProgress from './components/TrainerProgress';
+import MuteBars from './components/MuteBars';
 import ElapsedTime from './components/ElapsedTime';
 import TimeSignatureSelector from './components/TimeSignatureSelector';
 import VolumeSlider from './components/VolumeSlider';
@@ -68,6 +69,12 @@ export default function App() {
     const [timeSigBottom, setTimeSigBottom] = useLocalStorage('bottom_time_sign', 4);
     const [countdownBars, setCountdownBars] = useLocalStorage('countdown_bars', 1);
     const [lockFinalBpm, setLockFinalBpm] = useLocalStorage('metronome_lock_final', false);
+    // Bar muting is a practice modifier on top of any mode, so it isn't part of presets.
+    const [muteEnabled, setMuteEnabled] = useLocalStorage('metronome_mute_enabled', false);
+    const [muteStyle, setMuteStyle] = useLocalStorage('metronome_mute_style', 'random');
+    const [muteChance, setMuteChance] = useLocalStorage('metronome_mute_chance', 25);
+    const [muteOn, setMuteOn] = useLocalStorage('metronome_mute_on', 3);
+    const [muteOff, setMuteOff] = useLocalStorage('metronome_mute_off', 1);
 
     // Save local settings
     const [activePack, setActivePack] = useLocalStorage('metronome_active_pack', 'synth');
@@ -111,6 +118,10 @@ export default function App() {
     // the pattern; the switch above only decides whether it's heard.
     const {accents, toggleAccent, setAccentsForSig} = useAccentPattern(timeSigTop, timeSigBottom);
 
+    const muteSettings = useMemo(() => ({
+        enabled: muteEnabled, style: muteStyle, chance: muteChance, on: muteOn, off: muteOff
+    }), [muteEnabled, muteStyle, muteChance, muteOn, muteOff]);
+
     const {
         bpm,
         setBpm,
@@ -119,6 +130,7 @@ export default function App() {
         stepProgress,
         totalProgress,
         isResting,
+        isBarMuted,
         elapsedSeconds,
         beatTick,
         start,
@@ -128,7 +140,7 @@ export default function App() {
         setVolume,
         isAccentEnabled,
         setIsAccentEnabled
-    } = useMetronome(startBpm, soundSettings[activePack], accents);
+    } = useMetronome(startBpm, soundSettings[activePack], accents, muteSettings);
 
 
     const handleStart = useCallback(() => {
@@ -431,7 +443,7 @@ export default function App() {
 
                     <BeatIndicators isActive={isActive} currentBeat={currentBeat}
                                     beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}
-                                    isResting={isResting} pulseTick={beatTick}
+                                    isResting={isResting} pulseTick={beatTick} barMuted={isBarMuted}
                                     accents={accents} accentsEnabled={isAccentEnabled}
                                     onToggleAccent={toggleAccent}/>
 
@@ -447,6 +459,12 @@ export default function App() {
                             min={BPM_MIN} max={BPM_MAX} unit="bpm" defaultValue={120}
                             disabled={trainerLock}
                         />
+
+                        <MuteBars enabled={muteEnabled} setEnabled={setMuteEnabled}
+                                  style={muteStyle} setStyle={setMuteStyle}
+                                  chance={muteChance} setChance={setMuteChance}
+                                  onBars={muteOn} setOnBars={setMuteOn}
+                                  offBars={muteOff} setOffBars={setMuteOff}/>
                     </div>
 
                         {/* Right column: the drill. The dimming during a run sits on an

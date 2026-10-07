@@ -1,7 +1,7 @@
 import React, {memo} from "react";
 
 const BeatIndicators = memo(({
-                                 isActive, currentBeat, beatsPerMeasure, isResting, pulseTick,
+                                 isActive, currentBeat, beatsPerMeasure, isResting, pulseTick, barMuted = false,
                                  accents = [], accentsEnabled = true, onToggleAccent
                              }) => {
     const beats = Array.from({length: beatsPerMeasure || 4}, (_, i) => i + 1);
@@ -30,9 +30,10 @@ const BeatIndicators = memo(({
                                     before:absolute before:inset-x-0 before:-inset-y-2 before:content-['']
                                     ${idleFill}`}
                     >
-                        {/* One-shot pulse on the beat; keyed by pulseTick so it restarts
+                        {/* Nothing lights during a muted bar, so there's no cue to follow.
+                            One-shot pulse on the beat; keyed by pulseTick so it restarts
                             each beat (even when the same beat recurs, e.g. 1/4). */}
-                        {playing && currentBeat === b && (
+                        {playing && !barMuted && currentBeat === b && (
                             <span
                                 key={pulseTick}
                                 className={`absolute inset-0 rounded-md ${
