@@ -10,6 +10,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     const [stepProgress, setStepProgress] = useState(0);
     const [totalProgress, setTotalProgress] = useState(0);
     const [isResting, setIsResting] = useState(false);
+    const [elapsedSeconds, setElapsedSeconds] = useState(0);   // whole seconds played (count-in and rests excluded)
     const [beatTick, setBeatTick] = useState(0);   // increments each beat — restarts the pulse
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
     const [volume, setVolume] = useLocalStorage('metronome_volume', -6);
@@ -190,6 +191,11 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
             playedBeatsRef.current++;
         }
 
+        // Elapsed play time. The session clock starts in the future during the count-in
+        // (hence the clamp to 0); React skips the re-render while the second is unchanged.
+        const pausedMs = completedRestMsRef.current + (restingRef.current ? now - restStartTimeRef.current : 0);
+        setElapsedSeconds(Math.max(0, Math.floor((now - sessionStartTimeRef.current - pausedMs) / 1000)));
+
         // --- FIXED LOGIC ---
         // We check for trainer mode OR if we are currently in the "Locked" state
         // (where the session is finished but we want to keep the UI at 100%)
@@ -325,6 +331,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         setCurrentBeat(0);   // 0 = no beat lit (nothing lights during the count-in)
         setStepProgress(0);
         setTotalProgress(0);
+        setElapsedSeconds(0);
         notesInQueue.current = [];
         sessionStartTimeRef.current = null;
     };
@@ -374,7 +381,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     };
 
     return {
-        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, beatTick, start, stop,
+        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, elapsedSeconds, beatTick, start, stop,
         beatsPerMeasure, volume, setVolume, isAccentEnabled, setIsAccentEnabled
     };
 };
