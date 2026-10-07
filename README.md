@@ -118,7 +118,7 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 Versioning follows the `version` field in `package.json`.
 
 ### 0.9.0 — Mute bars (play by heart)
-* **A practice modifier in every mode:** switch on **Mute bars** under the tempo slider and the click drops out for whole bars, so you hold the tempo yourself and find the downbeat where the click returns. The beat bars keep running (dimmed while muted) so you can see where you are, and Trainer timing is unaffected.
+* **A practice modifier in every mode:** switch on **Mute bars** under the tempo slider and the click drops out for whole bars, so you hold the tempo yourself and find the downbeat where the click returns. The beat bars stay dark during a muted bar (no visual cue either), while Trainer timing and bars-mode progress carry on unaffected.
 * **Random** mutes each bar with the chance you set (10–80%); a muted bar is never followed by another muted bar.
 * **Pattern** plays N bars then mutes M, repeating (3 on / 1 off by default).
 * The first bar after the session starts, a tempo change or a rest always plays, so there's a click to lock onto. Settings apply on the next bar, even while running, and are remembered on the device (not part of presets).

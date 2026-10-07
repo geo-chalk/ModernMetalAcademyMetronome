@@ -8,8 +8,7 @@ const BeatIndicators = memo(({
     const playing = isActive && !isResting;
 
     return (
-        <div className={`flex justify-center gap-2 mb-4 short:mb-0 h-4 transition-opacity duration-150 ${
-            playing && barMuted ? 'opacity-30' : ''}`}>
+        <div className="flex justify-center gap-2 mb-4 short:mb-0 h-4">
             {beats.map((b) => {
                 const accented = accents.includes(b);
                 // The mark dims rather than disappearing when accents are switched
@@ -31,9 +30,10 @@ const BeatIndicators = memo(({
                                     before:absolute before:inset-x-0 before:-inset-y-2 before:content-['']
                                     ${idleFill}`}
                     >
-                        {/* One-shot pulse on the beat; keyed by pulseTick so it restarts
+                        {/* Nothing lights during a muted bar, so there's no cue to follow.
+                            One-shot pulse on the beat; keyed by pulseTick so it restarts
                             each beat (even when the same beat recurs, e.g. 1/4). */}
-                        {playing && currentBeat === b && (
+                        {playing && !barMuted && currentBeat === b && (
                             <span
                                 key={pulseTick}
                                 className={`absolute inset-0 rounded-md ${
