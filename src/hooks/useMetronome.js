@@ -12,6 +12,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     const [totalProgress, setTotalProgress] = useState(0);
     const [isResting, setIsResting] = useState(false);
     const [isBarMuted, setIsBarMuted] = useState(false);   // the bar being heard right now is silent
+    const [segmentIndex, setSegmentIndex] = useState(-1);   // Sequence mode: which timeline entry is playing (-1 = none)
     const [elapsedSeconds, setElapsedSeconds] = useState(0);   // whole seconds played (count-in and rests excluded)
     const [beatTick, setBeatTick] = useState(0);   // increments each beat — restarts the pulse
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
@@ -31,6 +32,9 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     const restStartTimeRef = useRef(0);    // Date.now() when the current rest began
     const restDurationMsRef = useRef(0);   // length of the current rest
     const completedRestMsRef = useRef(0);  // total rest already taken (excluded from playing time)
+    const seqIndexRef = useRef(0);         // Sequence mode: timeline entry being played
+    const seqStartMsRef = useRef(0);       // wall-clock start of that entry (carried forward, so it can't drift)
+    const seqDoneMsRef = useRef(0);        // total length of the entries already finished
     const settingsRef = useRef(null);
 
     // --- SCHEDULER REFS ---
@@ -338,6 +342,71 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
                 setStepProgress((stepElapsed / stepThreshold) * 100);
             }
         }
+
+        // --- SEQUENCE MODE ---
+        // Walks the timeline built by expandSteps(): play entries set the tempo, rest
+        // entries go silent with a count-in leading back. Everything is wall-clock.
+        if (settings.mode === 'sequence') {
+            const segs = settings.segments;
+            const seg = segs[seqIndexRef.current];
+            const segMs = seg.seconds * 1000;
+            const segElapsed = Math.max(0, now - seqStartMsRef.current);
+            const totalMs = segs.reduce((sum, g) => sum + g.seconds * 1000, 0);
+
+            setTotalProgress(Math.min(100, ((seqDoneMsRef.current + segElapsed) / totalMs) * 100));
+
+            if (segElapsed >= segMs) {
+                const next = seqIndexRef.current + 1;
+                if (next >= segs.length) {
+                    stop();
+                    return;
+                }
+                seqIndexRef.current = next;
+                seqDoneMsRef.current += segMs;
+                seqStartMsRef.current += segMs;
+                setSegmentIndex(next);
+                setStepProgress(0);
+
+                const nextSeg = segs[next];
+                if (nextSeg.type === 'rest') {
+                    // The step structure guarantees a play entry follows a rest.
+                    const upcomingBpm = segs[next + 1].bpm;
+                    bpmRef.current = upcomingBpm;   // the rest's count-in runs at the next tempo
+                    setBpm(upcomingBpm);
+                    muteStateRef.current = {...muteStateRef.current, resync: true};
+
+                    restingRef.current = true;
+                    setIsResting(true);
+                    setCurrentBeat(0);
+                    restStartTimeRef.current = now;
+
+                    const secPerBeat = (60.0 / upcomingBpm) * (4 / settings.timeSigBottom);
+                    const restSec = nextSeg.seconds;
+                    restDurationMsRef.current = restSec * 1000;
+
+                    // Same shape as the Trainer's rest: park the scheduler until the
+                    // count-in starts, then it rolls straight into the next step.
+                    const countInBeats = settings.countdownBars * settings.timeSigTop;
+                    const maxFit = secPerBeat > 0 ? Math.floor(restSec / secPerBeat) : 0;
+                    const scheduled = Math.min(countInBeats, maxFit);
+                    nextNoteTimeRef.current = toneNow + (restSec - scheduled * secPerBeat);
+                    countdownRemainingRef.current = scheduled;
+                    countdownIndexRef.current = 0;
+                    beatCounterRef.current = 0;
+                    lastBeatTimeRef.current = null;
+                } else {
+                    // A play entry: leaving a rest, or rolling on from the previous step.
+                    restingRef.current = false;
+                    setIsResting(false);
+                    bpmRef.current = nextSeg.bpm;
+                    setBpm(nextSeg.bpm);
+                    muteStateRef.current = {...muteStateRef.current, resync: true};
+                }
+            } else {
+                setStepProgress((segElapsed / segMs) * 100);
+            }
+        }
+
         requestRef.current = requestAnimationFrame(animate);
     };
 
@@ -356,6 +425,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         setStepProgress(0);
         setTotalProgress(0);
         setElapsedSeconds(0);
+        setSegmentIndex(-1);
         notesInQueue.current = [];
         sessionStartTimeRef.current = null;
     };
@@ -393,6 +463,9 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         restingRef.current = false;
         completedRestMsRef.current = 0;
         muteStateRef.current = INITIAL_MUTE_STATE;
+        seqIndexRef.current = 0;
+        seqDoneMsRef.current = 0;
+        setSegmentIndex(settings.mode === 'sequence' ? 0 : -1);
         setIsResting(false);
 
         // Start scheduler heartbeat
@@ -400,13 +473,14 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
 
         sessionStartTimeRef.current = Date.now() + (countdownDurationSec * 1000);
         stepStartTimeRef.current = sessionStartTimeRef.current;
+        seqStartMsRef.current = sessionStartTimeRef.current;
 
         setIsActive(true);
         requestRef.current = requestAnimationFrame(animate);
     };
 
     return {
-        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, isBarMuted, elapsedSeconds, beatTick, start, stop,
+        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, isBarMuted, elapsedSeconds, segmentIndex, beatTick, start, stop,
         beatsPerMeasure, volume, setVolume, isAccentEnabled, setIsAccentEnabled
     };
 };

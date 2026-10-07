@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, FastForward, Infinity as InfinityIcon, Info, Volume2, Rows, Maximize, Minimize } from 'lucide-react';
+import { X, FastForward, Infinity as InfinityIcon, ListOrdered, Info, Volume2, Rows, Maximize, Minimize } from 'lucide-react';
 
 const Switch = ({on}) => (
     <span className={`relative shrink-0 w-9 h-5 rounded-full transition-colors duration-200 ${on ? 'bg-[#FF820C]' : 'bg-white/10'}`}>
@@ -35,6 +35,7 @@ const SideMenu = ({ isOpen, onClose, mode, setMode, forceSingleColumn = false, o
                     {[
                         { id: 'trainer', label: 'Trainer', icon: <FastForward size={18}/> },
                         { id: 'constant', label: 'Constant', icon: <InfinityIcon size={18}/> },
+                        { id: 'sequence', label: 'Sequence', icon: <ListOrdered size={18}/> },
                         { id: 'info', label: 'Info', icon: <Info size={18}/> },
                         { id: 'sound', label: 'Sound Config', icon: <Volume2 size={18}/> }
                     ].map((m) => (

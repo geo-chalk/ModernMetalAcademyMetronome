@@ -117,6 +117,11 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
+### 0.10.0 — Sequence mode
+* **A third mode, Sequence, for routines the Trainer's even ramp can't express** — e.g. 140 bpm for 1m, rest 10s, 150 bpm for 1m, rest 10s, 140 bpm for 1m, rest 10s, 130 bpm for 1m. Each step has a tempo and a length, plus an optional rest after it (the count-in leads back in at the next tempo, as in the Trainer). Up to 12 steps; **Add step** copies the last one. The session stops after the last step.
+* The step that's playing lights up (blue while resting), and the progress bars show the current step and the whole sequence. Settings lock while it runs, like the Trainer, and **Mute bars** works on top of it.
+* Saved on the device with the other settings. It isn't part of Trainer presets yet.
+
 ### 0.9.0 — Mute bars (play by heart)
 * **A practice modifier in every mode:** switch on **Mute bars** under the tempo slider and the click drops out for whole bars, so you hold the tempo yourself and find the downbeat where the click returns. The beat bars stay dark during a muted bar (no visual cue either), while Trainer timing and bars-mode progress carry on unaffected.
 * **Random** mutes each bar with the chance you set (10–80%); a muted bar is never followed by another muted bar.
