@@ -8,7 +8,7 @@ const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 // the tempo yourself and find the next downbeat where the click comes back.
 const MuteBars = memo(({
                            enabled, setEnabled, style, setStyle,
-                           chance, setChance, onBars, setOnBars, offBars, setOffBars
+                           chance, setChance, maxRun, setMaxRun, onBars, setOnBars, offBars, setOffBars
                        }) => (
     <div className="flex flex-col gap-1 pt-2 border-t border-white/5 short:pt-1">
         <div className="flex items-center justify-between">
@@ -41,8 +41,13 @@ const MuteBars = memo(({
                 </div>
             </div>
             {style === 'random' ? (
-                <MarkedSlider label="Chance" value={chance} setter={setChance}
-                              min={10} max={80} step={5} unit="%" defaultValue={25}/>
+                <>
+                    <MarkedSlider label="Chance" value={chance} setter={setChance}
+                                  min={10} max={80} step={5} unit="%" defaultValue={25}/>
+                    <MarkedSlider label="Max in a row" value={maxRun} setter={setMaxRun}
+                                  min={1} max={4} step={1}
+                                  displayValue={plural(maxRun, 'bar')} defaultValue={1}/>
+                </>
             ) : (<>
                 <MarkedSlider label="Play" value={onBars} setter={setOnBars}
                               min={1} max={8} step={1}

@@ -24,18 +24,20 @@ const isTypingTarget = (el) => {
  * @param onToggleAccents
  *                 A — flip the accent switch. Bare `A` is safe: Cmd/Ctrl+A is
  *                 already returned above, so select-all still works.
+ * @param onToggleMute
+ *                 M — switch Mute bars on / off.
  */
-export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAccents} = {}) => {
+export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute} = {}) => {
     // Handlers behind a ref so the listener binds exactly once. The previous
     // version listed onSpace as a dependency; because useMetronome's start/stop
     // aren't memoized, handleStop -> toggleMetronome changed identity on every
     // render and the listener was torn down and re-added every render. The BPM
     // handlers close over the current tempo, so they change every nudge — all
     // the more reason to keep them out of the listener's dependencies.
-    const handlersRef = useRef({onSpace, onTap, onNudge, onSnap, onToggleAccents});
+    const handlersRef = useRef({onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute});
     useEffect(() => {
-        handlersRef.current = {onSpace, onTap, onNudge, onSnap, onToggleAccents};
-    }, [onSpace, onTap, onNudge, onSnap, onToggleAccents]);
+        handlersRef.current = {onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute};
+    }, [onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute]);
 
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -50,7 +52,7 @@ export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAc
             // instead of opening its dropdown.
             if (isTypingTarget(event.target) || isTypingTarget(document.activeElement)) return;
 
-            const {onSpace, onTap, onNudge, onSnap, onToggleAccents} = handlersRef.current;
+            const {onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute} = handlersRef.current;
 
             // Ctrl, Cmd and Alt always belong to the browser or the OS (Cmd+R
             // reload, Cmd+T new tab, Alt+Arrow history, Ctrl+Arrow Mission Control
@@ -112,6 +114,13 @@ export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAc
                 if (event.repeat) return;   // holding A would strobe the switch on/off
                 event.preventDefault();
                 onToggleAccents();
+                return;
+            }
+
+            if (isKey('m', 'KeyM') && onToggleMute) {
+                if (event.repeat) return;   // holding M would strobe muting on/off
+                event.preventDefault();
+                onToggleMute();
             }
         };
 

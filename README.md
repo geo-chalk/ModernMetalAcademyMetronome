@@ -117,6 +117,10 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
+### 0.11.0 — Mute bars: max in a row, and an M shortcut
+* **Random** mute bars gets a **Max in a row** setting (1–4 bars). It caps how many muted bars can come back to back; at 1 (the default, and how it behaved before) a muted bar is always followed by one that plays. Higher values give longer silent stretches, and the first bar after a start, tempo change or rest still always plays.
+* **Press M** to switch Mute bars on or off, including while playing (the next bar picks it up). It's listed with the other shortcuts in Info.
+
 ### 0.10.0 — Sequence mode
 * **A third mode, Sequence, for routines the Trainer's even ramp can't express** — e.g. 140 bpm for 1m, rest 10s, 150 bpm for 1m, rest 10s, 140 bpm for 1m, rest 10s, 130 bpm for 1m. Each step has a tempo and a length, plus an optional rest after it (the count-in leads back in at the next tempo, as in the Trainer). Up to 12 steps; **Add step** copies the last one, and the burger handle beside each step reorders it: drag it with a mouse, or press and hold on a touchscreen (a quick swipe still scrolls). The rests stay in their slots between steps, so only tempo and length move. Adding a step carries on from the rest you set on the step before it. The session stops after the last step.
 * The step that's playing lights up (blue while resting), and the progress bars show the current step and the whole sequence. Settings lock while it runs, like the Trainer, and **Mute bars** works on top of it.
