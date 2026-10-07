@@ -91,6 +91,7 @@ export default function App() {
     const [muteEnabled, setMuteEnabled] = useLocalStorage('metronome_mute_enabled', false);
     const [muteStyle, setMuteStyle] = useLocalStorage('metronome_mute_style', 'random');
     const [muteChance, setMuteChance] = useLocalStorage('metronome_mute_chance', 25);
+    const [muteMaxRun, setMuteMaxRun] = useLocalStorage('metronome_mute_max_run', 1);
     const [muteOn, setMuteOn] = useLocalStorage('metronome_mute_on', 3);
     const [muteOff, setMuteOff] = useLocalStorage('metronome_mute_off', 1);
 
@@ -137,8 +138,8 @@ export default function App() {
     const {accents, toggleAccent, setAccentsForSig} = useAccentPattern(timeSigTop, timeSigBottom);
 
     const muteSettings = useMemo(() => ({
-        enabled: muteEnabled, style: muteStyle, chance: muteChance, on: muteOn, off: muteOff
-    }), [muteEnabled, muteStyle, muteChance, muteOn, muteOff]);
+        enabled: muteEnabled, style: muteStyle, chance: muteChance, maxRun: muteMaxRun, on: muteOn, off: muteOff
+    }), [muteEnabled, muteStyle, muteChance, muteMaxRun, muteOn, muteOff]);
 
     const {
         bpm,
@@ -263,10 +264,18 @@ export default function App() {
         setIsAccentEnabled(on => !on);
     }, [accentKeyEnabled, setIsAccentEnabled]);
 
+    // The Mute bars switch lives on the playing screens only, so that's where M works.
+    // Like the accent key it's live mid-run: the next bar picks the change up.
+    const toggleMute = useCallback(() => {
+        if (isSettingsMode) return;
+        setMuteEnabled(on => !on);
+    }, [isSettingsMode, setMuteEnabled]);
+
     useKeyboardControls({
         onSpace: toggleMetronome, onTap: tapTempo,
         onNudge: nudgeBpm, onSnap: snapBpmToGrid,
-        onToggleAccents: toggleAccents
+        onToggleAccents: toggleAccents,
+        onToggleMute: toggleMute
     });
 
     // --- Presets -----------------------------------------------------------
@@ -525,6 +534,7 @@ export default function App() {
                         <MuteBars enabled={muteEnabled} setEnabled={setMuteEnabled}
                                   style={muteStyle} setStyle={setMuteStyle}
                                   chance={muteChance} setChance={setMuteChance}
+                                  maxRun={muteMaxRun} setMaxRun={setMuteMaxRun}
                                   onBars={muteOn} setOnBars={setMuteOn}
                                   offBars={muteOff} setOffBars={setMuteOff}/>
                     </div>

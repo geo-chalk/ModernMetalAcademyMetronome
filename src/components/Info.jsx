@@ -156,6 +156,7 @@ const Info = () => {
     const shortcuts = [
         {key: "Space", action: "Start / Stop"},
         {key: "A", action: "Toggle accents"},
+        {key: "M", action: "Mute bars on / off"},
         {key: "T", action: "Tap tempo"},
         {key: "← →", action: "Tempo ± 5"},
         {key: "Shift ← →", action: "Tempo ± 1"},
