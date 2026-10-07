@@ -133,7 +133,7 @@ const Info = () => {
             term: "Sequence",
             desc: <>Build your own routine step by step: each step has a tempo and a length, with an optional <Em>Rest</Em> after
                 it (a count-in leads back in at the next tempo). Lengths are in <Em>Time</Em> or <Em>Bars</Em>; <Em>Add step</Em>
-                copies the last step and the chevrons reorder them. Save a routine as a preset to bring it back later.
+                copies the last step. Drag the burger handle (press and hold on a touchscreen) to reorder steps. Save a routine as a preset to bring it back later.
                 The sequence stops after the last step.</>
         },
         {

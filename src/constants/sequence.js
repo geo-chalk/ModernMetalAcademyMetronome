@@ -38,14 +38,17 @@ export const stepLadder = (ladder, value, dir) => {
     return ladder[next];
 };
 
-// The step at `index` swapped with its neighbour in `dir` (+1 down / -1 up). Its
-// rest travels with it. Out of range returns the list unchanged.
-export const moveStep = (steps, index, dir) => {
-    const target = index + dir;
-    if (target < 0 || target >= steps.length) return steps;
+// The step at `from` moved to position `to`, the others shifting to make room. Rests
+// belong to the gaps between steps, not to the steps themselves: they stay in their
+// slots (so what you set between slot 1 and slot 2 is still there afterwards, and the
+// hidden rest of the last step never surfaces), and only tempo and length move.
+// Out of range, or no move, returns the list unchanged.
+export const moveStepTo = (steps, from, to) => {
+    if (from === to || from < 0 || to < 0 || from >= steps.length || to >= steps.length) return steps;
     const next = [...steps];
-    [next[index], next[target]] = [next[target], next[index]];
-    return next;
+    const [moved] = next.splice(from, 1);
+    next.splice(to, 0, moved);
+    return next.map((s, k) => ({...s, restAfter: steps[k].restAfter, restBars: steps[k].restBars}));
 };
 
 // Repair pass for whatever came out of localStorage. Steps from before bars existed

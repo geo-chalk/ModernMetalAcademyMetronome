@@ -1,9 +1,10 @@
 import React, {memo} from 'react';
-import {Plus, Minus, X, ChevronUp, ChevronDown} from 'lucide-react';
+import {Plus, Minus, X, Menu} from 'lucide-react';
+import {useDragReorder} from '../hooks/useDragReorder';
 import {BPM_MIN, BPM_MAX, clampBpm} from '../constants/bpm';
 import {
     SEQ_MAX_STEPS, STEP_SECONDS_LADDER, REST_SECONDS_LADDER, STEP_BARS_LADDER, REST_BARS_LADDER,
-    stepLadder, moveStep
+    stepLadder, moveStepTo
 } from '../constants/sequence';
 
 const k2dStack = {fontFamily: "'K2D', sans-serif"};
@@ -50,10 +51,19 @@ const SequenceEditor = memo(({
     const update = (i, patch) => setSteps(steps.map((s, idx) => idx === i ? {...s, ...patch} : s));
     const remove = (i) => setSteps(steps.filter((_, idx) => idx !== i));
     // New steps start as a copy of the last one, so building a routine is mostly tapping Add.
-    const add = () => setSteps([...steps, {...steps[steps.length - 1]}]);
+    // The last step's own rest is hidden (nothing follows it), so it can be stale; adding
+    // makes it the rest that now shows between the two, which should carry on from the
+    // rest you set on the step before it rather than jump back to a value you never saw.
+    const add = () => {
+        const last = steps[steps.length - 1];
+        const before = steps[steps.length - 2];
+        const rest = before ? {restAfter: before.restAfter, restBars: before.restBars} : {};
+        setSteps([...steps.slice(0, -1), {...last, ...rest}, {...last, ...rest}]);
+    };
 
     const setBpm = (i, value) => update(i, {bpm: clampBpm(value)});
-    const move = (i, dir) => setSteps(moveStep(steps, i, dir));
+    const move = (from, to) => setSteps(moveStepTo(steps, from, to));
+    const reorder = useDragReorder({onMove: move, enabled: !locked});
 
     return (
         <div className={`flex flex-col gap-1 ${locked ? 'opacity-50 pointer-events-none' : ''}`}>
@@ -81,10 +91,29 @@ const SequenceEditor = memo(({
                 const playing = activeStep === i && activeType === 'play';
                 const resting = activeStep === i && activeType === 'rest';
                 return (
-                    <React.Fragment key={i}>
-                        <div className={`flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 border transition-colors ${
-                            playing ? 'border-[#FF820C] bg-[#FF820C]/10' : 'border-white/5 bg-white/[0.03]'}`}>
-                            <span className="w-4 text-[12px] font-black text-white/30 tabular-nums" style={k2dStack}>{i + 1}</span>
+                    <div key={i} className="flex flex-col gap-1">
+                        <div ref={reorder.blockRef(i)} style={reorder.blockStyle(i)}
+                             className={`flex items-center justify-between gap-2 rounded-lg px-2 py-1.5 border transition-colors ${
+                            playing ? 'border-[#FF820C] bg-[#FF820C]/10' : 'border-white/5 bg-[#232323]'} ${
+                            reorder.dragFrom === i ? 'drop-shadow-xl' : ''}`}>
+                            {/* Drag handle: a mouse picks the step up at once, a finger needs a
+                                long press so scrolling past it never grabs a row. Arrow keys move
+                                it too, for keyboard users. */}
+                            <button type="button" {...reorder.handleProps(i)}
+                                    onKeyDown={(e) => {
+                                        const to = e.key === 'ArrowUp' ? i - 1 : e.key === 'ArrowDown' ? i + 1 : null;
+                                        if (to === null) return;
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        if (to >= 0 && to < steps.length) move(i, to);
+                                    }}
+                                    aria-label={`Reorder step ${i + 1}. Long press and drag, or use the up and down arrow keys`}
+                                    className="relative -mr-1 w-5 h-7 shrink-0 flex items-center justify-center text-white/30 hover:text-white
+                                               cursor-grab active:cursor-grabbing touch-pan-y select-none [-webkit-touch-callout:none]
+                                               before:absolute before:-inset-1 before:content-['']">
+                                <Menu size={14}/>
+                            </button>
+                            <span className="w-3 text-[12px] font-black text-white/30 tabular-nums" style={k2dStack}>{i + 1}</span>
                             <Stepper label={`Step ${i + 1} tempo`}
                                      onMinus={() => setBpm(i, step.bpm - 5)} onPlus={() => setBpm(i, step.bpm + 5)}
                                      canMinus={step.bpm > BPM_MIN} canPlus={step.bpm < BPM_MAX}>
@@ -97,20 +126,6 @@ const SequenceEditor = memo(({
                                      onPlus={() => update(i, {[lengthKey]: stepLadder(lengthLadder, step[lengthKey], +1)})}
                                      canMinus={step[lengthKey] > lengthLadder[0]}
                                      canPlus={step[lengthKey] < lengthLadder[lengthLadder.length - 1]}/>
-                            <div className="flex flex-col">
-                                <button type="button" onClick={() => move(i, -1)} disabled={i === 0}
-                                        aria-label={`Move step ${i + 1} up`}
-                                        className="relative w-5 h-4 flex items-center justify-center text-white/30 hover:text-white
-                                                   disabled:opacity-20 disabled:pointer-events-none">
-                                    <ChevronUp size={14}/>
-                                </button>
-                                <button type="button" onClick={() => move(i, +1)} disabled={isLast}
-                                        aria-label={`Move step ${i + 1} down`}
-                                        className="relative w-5 h-4 flex items-center justify-center text-white/30 hover:text-white
-                                                   disabled:opacity-20 disabled:pointer-events-none">
-                                    <ChevronDown size={14}/>
-                                </button>
-                            </div>
                             <button type="button" onClick={() => remove(i)} disabled={steps.length <= 1}
                                     aria-label={`Remove step ${i + 1}`}
                                     className="relative w-6 h-7 flex items-center justify-center text-white/30 hover:text-white
@@ -134,7 +149,7 @@ const SequenceEditor = memo(({
                                 <span className="w-6"/>
                             </div>
                         )}
-                    </React.Fragment>
+                    </div>
                 );
             })}
 
