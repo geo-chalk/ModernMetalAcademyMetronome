@@ -32,13 +32,13 @@ export const PRESET_FIELDS = {
 };
 
 // Fields that aren't plain bounded numbers.
-const TIME_SIG_BOTTOMS = [2, 4, 8, 16];
+export const TIME_SIG_BOTTOMS = [2, 4, 8, 16];
 const INTERVAL_UNITS = ['time', 'bars'];
 
 export const MAX_PRESETS = 20;
 export const MAX_NAME_LENGTH = 24;
 
-const clampField = (value, {min, max, fallback}) => {
+export const clampField = (value, {min, max, fallback}) => {
     // null, '' and false all coerce to 0 through Number(), which is finite and
     // would clamp to min — so a field an older build never wrote would come back
     // as the smallest legal value rather than the default. Reject the empties
@@ -93,6 +93,11 @@ export const validatePreset = (raw) => {
 
     return out;
 };
+
+// What usePresets needs to store one kind of preset: where, how to snapshot the
+// state, and how to repair what comes back. Sequence presets have their own (see
+// constants/sequence.js), so the two lists never mix.
+export const TRAINER_PRESETS = {key: 'metronome_presets', capture: capturePreset, validate: validatePreset};
 
 export const normalisePresetName = (name) =>
     String(name ?? '').trim().slice(0, MAX_NAME_LENGTH);

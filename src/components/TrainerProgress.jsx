@@ -1,7 +1,7 @@
 import React, {memo} from 'react';
 
-const TrainerProgress = memo(({isActive, progress, totalProgress, isResting, mode}) => {
-    if (mode !== 'trainer') return null;
+const TrainerProgress = memo(({isActive, progress, totalProgress, isResting, mode, stepLabel = 'Cycle'}) => {
+    if (mode !== 'trainer' && mode !== 'sequence') return null;
 
     const robotoStack = {fontFamily: "'K2D', sans-serif"};
     // Rest uses a cool sky-blue to read as "cooldown" vs the orange "work" colour.
@@ -11,7 +11,7 @@ const TrainerProgress = memo(({isActive, progress, totalProgress, isResting, mod
         <div className="flex flex-col gap-2 py-2 short:gap-1 short:py-0">
             <div className="w-full">
                 <div className="flex justify-between items-center mb-1 short:mb-0.5 text-white/40 tracking-[0.1em]">
-                    <span className="text-[12px] font-black" style={robotoStack}>{isResting ? 'Rest' : 'Cycle'}</span>
+                    <span className="text-[12px] font-black" style={robotoStack}>{isResting ? 'Rest' : stepLabel}</span>
                     <span className="text-[14px] font-black" style={{...robotoStack, color: cycleColor}}>
             {Math.round(progress)}%
           </span>

@@ -8,6 +8,9 @@ import {useWakeLock} from './hooks/useWakeLock';
 import {useFullscreen} from './hooks/useFullscreen';
 import {MIN_TAPS, useTapTempo} from './hooks/useTapTempo';
 import {BPM_MAX, BPM_MIN, clampBpm, snapBpm} from './constants/bpm';
+import {
+    normaliseSteps, normaliseUnit, expandSteps, sequenceSeconds, DEFAULT_STEPS, SEQUENCE_PRESETS
+} from './constants/sequence';
 import {usePresets} from './hooks/usePresets';
 import {useAccentPattern} from './hooks/useAccentPattern';
 
@@ -17,6 +20,7 @@ import BeatIndicators from './components/BeatIndicators';
 import BPMDisplay from './components/BPMDisplay';
 import TrainerProgress from './components/TrainerProgress';
 import MuteBars from './components/MuteBars';
+import SequenceEditor from './components/SequenceEditor';
 import ElapsedTime from './components/ElapsedTime';
 import TimeSignatureSelector from './components/TimeSignatureSelector';
 import VolumeSlider from './components/VolumeSlider';
@@ -69,6 +73,20 @@ export default function App() {
     const [timeSigBottom, setTimeSigBottom] = useLocalStorage('bottom_time_sign', 4);
     const [countdownBars, setCountdownBars] = useLocalStorage('countdown_bars', 1);
     const [lockFinalBpm, setLockFinalBpm] = useLocalStorage('metronome_lock_final', false);
+    // Sequence mode: a hand-built list of steps (tempo, length, rest after). Stored raw
+    // and repaired on read, like presets.
+    const [seqStored, setSeqSteps] = useLocalStorage('metronome_sequence', DEFAULT_STEPS);
+    const seqSteps = useMemo(() => normaliseSteps(seqStored), [seqStored]);
+    const [seqStoredUnit, setSeqUnit] = useLocalStorage('metronome_sequence_unit', 'time');
+    const seqUnit = normaliseUnit(seqStoredUnit);
+    // Bars lengths depend on the meter, so the timeline is rebuilt when it changes.
+    const seqTimeline = useMemo(
+        () => expandSteps(seqSteps, seqUnit, timeSigTop, timeSigBottom),
+        [seqSteps, seqUnit, timeSigTop, timeSigBottom]);
+    const seqSeconds = useMemo(
+        () => sequenceSeconds(seqSteps, seqUnit, timeSigTop, timeSigBottom),
+        [seqSteps, seqUnit, timeSigTop, timeSigBottom]);
+
     // Bar muting is a practice modifier on top of any mode, so it isn't part of presets.
     const [muteEnabled, setMuteEnabled] = useLocalStorage('metronome_mute_enabled', false);
     const [muteStyle, setMuteStyle] = useLocalStorage('metronome_mute_style', 'random');
@@ -132,6 +150,7 @@ export default function App() {
         isResting,
         isBarMuted,
         elapsedSeconds,
+        segmentIndex,
         beatTick,
         start,
         stop,
@@ -145,9 +164,11 @@ export default function App() {
 
     const handleStart = useCallback(() => {
 
-        const startTempo = startBpm;
+        // Sequence mode takes its tempo from the first step, not the shared start tempo.
+        const startTempo = mode === 'sequence' ? seqTimeline[0].bpm : startBpm;
         start({
             mode,
+            segments: seqTimeline,
             increment,
             negativeIncrement,
             intervalUnit,
@@ -162,7 +183,7 @@ export default function App() {
             countdownBars,
             lockFinalBpm
         }, startTempo, soundSettings[activePack]); // FIX: Pass only the active pack
-    }, [mode, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds, intervalBars, totalReps, restSeconds, restBars, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm]);
+    }, [mode, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds, intervalBars, totalReps, restSeconds, restBars, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm, seqTimeline]);
 
     const handleStop = useCallback(() => {
         if (mode === 'constant') setStartBpm(bpm);
@@ -184,7 +205,7 @@ export default function App() {
 
     // In Trainer mode a running session is locked — no parameter changes mid-drill.
     // (Constant mode stays live-editable so the tempo can be adjusted while playing.)
-    const trainerLock = isActive && mode === 'trainer';
+    const trainerLock = isActive && (mode === 'trainer' || mode === 'sequence');
 
     const isSettingsMode = mode === 'info' || mode === 'sound';
 
@@ -194,12 +215,12 @@ export default function App() {
     // column scrolls on its own, so the readout never moves while a setting is
     // adjusted. Constant, Info and Sound keep the single narrow card, and the
     // side menu can pin Trainer to one column as well.
-    const twoCol = mode === 'trainer' && !forceSingleColumn;
+    const twoCol = (mode === 'trainer' || mode === 'sequence') && !forceSingleColumn;
 
     // Tempo shortcuts are inert during a Trainer run (the ramp owns the tempo and
     // would overwrite anything set) and on the settings screens, where the readout
     // isn't on screen — silently moving an invisible tempo is worse than a no-op.
-    const tempoKeysEnabled = !trainerLock && !isSettingsMode;
+    const tempoKeysEnabled = !trainerLock && !isSettingsMode && mode !== 'sequence';
 
     // The accent shortcut is gated differently from the tempo keys: accents are one
     // of the three controls deliberately left live during a Trainer run, and the
@@ -207,7 +228,7 @@ export default function App() {
     // has no switch to reflect the change, so that's the one screen it's inert on.
     const accentKeyEnabled = mode !== 'info';
 
-    const displayBpm = isActive ? bpm : startBpm;
+    const displayBpm = isActive ? bpm : (mode === 'sequence' ? seqSteps[0].bpm : startBpm);
 
     const displaySetter = useCallback((val) => {
         setStartBpm(val);
@@ -304,6 +325,44 @@ export default function App() {
         setSelectedPresetId(prev => (prev === id ? '' : prev));
     }, [removePreset]);
 
+    // Sequence presets: the same machinery, with their own list. A sequence preset is
+    // the routine, its length unit and the meter it was built for.
+    const {
+        presets: seqPresets, save: saveSeqPreset, load: loadSeqPreset,
+        remove: removeSeqPreset, isFull: seqPresetsFull
+    } = usePresets(SEQUENCE_PRESETS);
+    const [selectedSeqPresetId, setSelectedSeqPresetId] = useState('');
+
+    const handleSelectSeqPreset = useCallback((id) => {
+        setSelectedSeqPresetId(id);
+        if (!id) return;
+
+        const p = loadSeqPreset(id);
+        if (!p) {
+            setSelectedSeqPresetId('');
+            return;
+        }
+
+        setSeqSteps(p.steps);
+        setSeqUnit(p.unit);
+        setTimeSigTop(p.timeSigTop);
+        setTimeSigBottom(p.timeSigBottom);
+        setCountdownBars(p.countdownBars);
+        setAccentsForSig(p.timeSigTop, p.timeSigBottom, p.accents);
+    }, [loadSeqPreset, setSeqSteps, setSeqUnit, setTimeSigTop, setTimeSigBottom, setCountdownBars, setAccentsForSig]);
+
+    const handleSaveSeqPreset = useCallback((name) => {
+        const saved = saveSeqPreset(name, {
+            steps: seqSteps, unit: seqUnit, timeSigTop, timeSigBottom, countdownBars, accents
+        });
+        if (saved) setSelectedSeqPresetId(saved.id);
+    }, [saveSeqPreset, seqSteps, seqUnit, timeSigTop, timeSigBottom, countdownBars, accents]);
+
+    const handleDeleteSeqPreset = useCallback((id) => {
+        removeSeqPreset(id);
+        setSelectedSeqPresetId(prev => (prev === id ? '' : prev));
+    }, [removeSeqPreset]);
+
     // Keep the negative increment from ever exceeding the positive one,
     // so the see-saw ramp can never lower the net tempo.
     const handleIncrementChange = (val) => {
@@ -388,7 +447,7 @@ export default function App() {
                     </button>
                     {!isSettingsMode ? (
                         <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/5">
-                            {['trainer', 'constant'].map((m) => (
+                            {['trainer', 'constant', 'sequence'].map((m) => (
                                 <button
                                     key={m}
                                     onClick={() => { if (m !== mode) handleMenuSelect(m); }}
@@ -433,7 +492,7 @@ export default function App() {
                         <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
                         <div className="flex-1">
                             <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive}
-                                        locked={trainerLock}
+                                        locked={trainerLock || mode === 'sequence'}
                                         onTap={tapTempo} onTapReset={resetTapTempo}
                                         tapCount={tapCount} tapPulse={tapPulse} minTaps={MIN_TAPS}/>
                         </div>
@@ -448,17 +507,20 @@ export default function App() {
                                     onToggleAccent={toggleAccent}/>
 
                     <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
-                                     isResting={isResting} mode={mode}/>
+                                     isResting={isResting} mode={mode}
+                                     stepLabel={mode === 'sequence' && segmentIndex >= 0 ? `Step ${seqTimeline[segmentIndex]?.step + 1} of ${seqSteps.length}` : 'Cycle'}/>
 
                     {mode === 'constant' && <ElapsedTime isActive={isActive} seconds={elapsedSeconds}/>}
 
-                        <StartBPMSlider
-                            label={mode === 'trainer' ? "Start BPM" : "Tempo"}
-                            value={isActive && mode === 'constant' ? bpm : startBpm}
-                            setter={displaySetter}
-                            min={BPM_MIN} max={BPM_MAX} unit="bpm" defaultValue={120}
-                            disabled={trainerLock}
-                        />
+                        {mode !== 'sequence' && (
+                            <StartBPMSlider
+                                label={mode === 'trainer' ? "Start BPM" : "Tempo"}
+                                value={isActive && mode === 'constant' ? bpm : startBpm}
+                                setter={displaySetter}
+                                min={BPM_MIN} max={BPM_MAX} unit="bpm" defaultValue={120}
+                                disabled={trainerLock}
+                            />
+                        )}
 
                         <MuteBars enabled={muteEnabled} setEnabled={setMuteEnabled}
                                   style={muteStyle} setStyle={setMuteStyle}
@@ -469,6 +531,28 @@ export default function App() {
 
                         {/* Right column: the drill. The dimming during a run sits on an
                             inner wrapper so the column itself still scrolls. */}
+                        {mode === 'sequence' && (
+                            <div className={`pt-4 border-t border-white/5 ${
+                                twoCol ? 'twocol:pt-0 twocol:border-t-0 twocol:border-l twocol:pl-6 twocol:min-h-0 twocol:overflow-y-auto twocol:overflow-x-hidden no-scrollbar touch-pan-y' : ''}`}>
+                                <div className={isActive ? 'opacity-50 pointer-events-none' : ''}>
+                                    <PresetBar
+                                        presets={seqPresets}
+                                        selectedId={selectedSeqPresetId}
+                                        onSelect={handleSelectSeqPreset}
+                                        onSave={handleSaveSeqPreset}
+                                        onDelete={handleDeleteSeqPreset}
+                                        isFull={seqPresetsFull}
+                                        disabled={isActive}
+                                    />
+                                </div>
+                                <SequenceEditor steps={seqSteps} setSteps={setSeqSteps}
+                                                unit={seqUnit} setUnit={setSeqUnit}
+                                                activeStep={seqTimeline[segmentIndex]?.step}
+                                                activeType={seqTimeline[segmentIndex]?.type}
+                                                locked={isActive} formatDuration={formatDuration}
+                                                totalSeconds={seqSeconds}/>
+                            </div>
+                        )}
                         {mode === 'trainer' && (
                             <div className={`pt-4 border-t border-white/5 ${
                                 twoCol ? 'twocol:pt-0 twocol:border-t-0 twocol:border-l twocol:pl-6 twocol:min-h-0 twocol:overflow-y-auto twocol:overflow-x-hidden no-scrollbar touch-pan-y' : ''}`}>

@@ -130,6 +130,13 @@ const Info = () => {
                 modes — or opening the menu — stops a running session.</>
         },
         {
+            term: "Sequence",
+            desc: <>Build your own routine step by step: each step has a tempo and a length, with an optional <Em>Rest</Em> after
+                it (a count-in leads back in at the next tempo). Lengths are in <Em>Time</Em> or <Em>Bars</Em>; <Em>Add step</Em>
+                copies the last step. Drag the burger handle (press and hold on a touchscreen) to reorder steps. Save a routine as a preset to bring it back later.
+                The sequence stops after the last step.</>
+        },
+        {
             term: "Locked while running",
             desc: <>During a Trainer session the settings lock so the drill can't shift mid-run; only <Em>Volume</Em>, <Em>Accents</Em>, and
                 the mode switch stay live. Constant mode lets you change the tempo on the fly.</>
