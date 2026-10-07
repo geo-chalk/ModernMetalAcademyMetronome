@@ -1,8 +1,9 @@
 import React, {memo} from 'react';
-import {Plus, Minus, X} from 'lucide-react';
+import {Plus, Minus, X, ChevronUp, ChevronDown} from 'lucide-react';
 import {BPM_MIN, BPM_MAX, clampBpm} from '../constants/bpm';
 import {
-    SEQ_MAX_STEPS, STEP_SECONDS_LADDER, REST_SECONDS_LADDER, stepLadder
+    SEQ_MAX_STEPS, STEP_SECONDS_LADDER, REST_SECONDS_LADDER, STEP_BARS_LADDER, REST_BARS_LADDER,
+    stepLadder, moveStep
 } from '../constants/sequence';
 
 const k2dStack = {fontFamily: "'K2D', sans-serif"};
@@ -31,20 +32,47 @@ const Stepper = ({value, display, onMinus, onPlus, canMinus = true, canPlus = tr
     </div>
 );
 
-const SequenceEditor = memo(({steps, setSteps, activeStep, activeType, locked, formatDuration, totalSeconds}) => {
+const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
+
+const SequenceEditor = memo(({
+                                 steps, setSteps, unit, setUnit, activeStep, activeType, locked, formatDuration, totalSeconds
+                             }) => {
+    const inBars = unit === 'bars';
+    // The two units differ only in which field they edit and how it is shown.
+    const lengthKey = inBars ? 'bars' : 'seconds';
+    const restKey = inBars ? 'restBars' : 'restAfter';
+    const lengthLadder = inBars ? STEP_BARS_LADDER : STEP_SECONDS_LADDER;
+    const restLadder = inBars ? REST_BARS_LADDER : REST_SECONDS_LADDER;
+    const showLength = (n) => (inBars ? plural(n, 'bar') : formatDuration(n));
+    const showRest = (n) => (n === 0 ? 'none' : showLength(n));
+    const valueWidth = inBars ? 'w-[3.75rem]' : 'w-[3.25rem]';
+
     const update = (i, patch) => setSteps(steps.map((s, idx) => idx === i ? {...s, ...patch} : s));
     const remove = (i) => setSteps(steps.filter((_, idx) => idx !== i));
     // New steps start as a copy of the last one, so building a routine is mostly tapping Add.
     const add = () => setSteps([...steps, {...steps[steps.length - 1]}]);
 
     const setBpm = (i, value) => update(i, {bpm: clampBpm(value)});
+    const move = (i, dir) => setSteps(moveStep(steps, i, dir));
 
     return (
         <div className={`flex flex-col gap-1 ${locked ? 'opacity-50 pointer-events-none' : ''}`}>
             <div className="flex items-center justify-between mb-1">
+                <span className="text-[14px] font-bold text-white/40 tracking-wider" style={k2dStack}>Length Type</span>
+                <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/5">
+                    {['time', 'bars'].map((u) => (
+                        <button key={u} onClick={() => setUnit(u)}
+                                className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${unit === u ? 'bg-[#FF820C] text-white' : 'text-white/40 hover:text-white'}`}
+                                style={k2dStack}>
+                            {u === 'time' ? 'Time' : 'Bars'}
+                        </button>
+                    ))}
+                </div>
+            </div>
+            <div className="flex items-center justify-between mb-1">
                 <span className="text-[14px] font-bold text-white/40 tracking-wider" style={k2dStack}>Sequence</span>
                 <span className="text-[12px] font-bold text-white/30 tracking-wider tabular-nums" style={k2dStack}>
-                    {steps.length} {steps.length === 1 ? 'step' : 'steps'} · {formatDuration(totalSeconds)}
+                    {plural(steps.length, 'step')} · {formatDuration(Math.round(totalSeconds))}
                 </span>
             </div>
 
@@ -64,11 +92,25 @@ const SequenceEditor = memo(({steps, setSteps, activeStep, activeType, locked, f
                                     {step.bpm}<span className="text-[9px] text-white/30 ml-0.5">bpm</span>
                                 </span>
                             </Stepper>
-                            <Stepper label={`Step ${i + 1} length`} display={formatDuration(step.seconds)}
-                                     onMinus={() => update(i, {seconds: stepLadder(STEP_SECONDS_LADDER, step.seconds, -1)})}
-                                     onPlus={() => update(i, {seconds: stepLadder(STEP_SECONDS_LADDER, step.seconds, +1)})}
-                                     canMinus={step.seconds > STEP_SECONDS_LADDER[0]}
-                                     canPlus={step.seconds < STEP_SECONDS_LADDER[STEP_SECONDS_LADDER.length - 1]}/>
+                            <Stepper label={`Step ${i + 1} length`} display={showLength(step[lengthKey])} width={valueWidth}
+                                     onMinus={() => update(i, {[lengthKey]: stepLadder(lengthLadder, step[lengthKey], -1)})}
+                                     onPlus={() => update(i, {[lengthKey]: stepLadder(lengthLadder, step[lengthKey], +1)})}
+                                     canMinus={step[lengthKey] > lengthLadder[0]}
+                                     canPlus={step[lengthKey] < lengthLadder[lengthLadder.length - 1]}/>
+                            <div className="flex flex-col">
+                                <button type="button" onClick={() => move(i, -1)} disabled={i === 0}
+                                        aria-label={`Move step ${i + 1} up`}
+                                        className="relative w-5 h-4 flex items-center justify-center text-white/30 hover:text-white
+                                                   disabled:opacity-20 disabled:pointer-events-none">
+                                    <ChevronUp size={14}/>
+                                </button>
+                                <button type="button" onClick={() => move(i, +1)} disabled={isLast}
+                                        aria-label={`Move step ${i + 1} down`}
+                                        className="relative w-5 h-4 flex items-center justify-center text-white/30 hover:text-white
+                                                   disabled:opacity-20 disabled:pointer-events-none">
+                                    <ChevronDown size={14}/>
+                                </button>
+                            </div>
                             <button type="button" onClick={() => remove(i)} disabled={steps.length <= 1}
                                     aria-label={`Remove step ${i + 1}`}
                                     className="relative w-6 h-7 flex items-center justify-center text-white/30 hover:text-white
@@ -84,11 +126,11 @@ const SequenceEditor = memo(({steps, setSteps, activeStep, activeType, locked, f
                                 <span className="w-4"/>
                                 <span className="text-[12px] font-bold text-white/30 tracking-wider" style={k2dStack}>Rest</span>
                                 <Stepper label={`Rest after step ${i + 1}`}
-                                         display={step.restAfter === 0 ? 'none' : formatDuration(step.restAfter)}
-                                         onMinus={() => update(i, {restAfter: stepLadder(REST_SECONDS_LADDER, step.restAfter, -1)})}
-                                         onPlus={() => update(i, {restAfter: stepLadder(REST_SECONDS_LADDER, step.restAfter, +1)})}
-                                         canMinus={step.restAfter > 0}
-                                         canPlus={step.restAfter < REST_SECONDS_LADDER[REST_SECONDS_LADDER.length - 1]}/>
+                                         display={showRest(step[restKey])} width={valueWidth}
+                                         onMinus={() => update(i, {[restKey]: stepLadder(restLadder, step[restKey], -1)})}
+                                         onPlus={() => update(i, {[restKey]: stepLadder(restLadder, step[restKey], +1)})}
+                                         canMinus={step[restKey] > 0}
+                                         canPlus={step[restKey] < restLadder[restLadder.length - 1]}/>
                                 <span className="w-6"/>
                             </div>
                         )}

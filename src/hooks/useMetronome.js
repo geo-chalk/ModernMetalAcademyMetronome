@@ -34,7 +34,8 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     const completedRestMsRef = useRef(0);  // total rest already taken (excluded from playing time)
     const seqIndexRef = useRef(0);         // Sequence mode: timeline entry being played
     const seqStartMsRef = useRef(0);       // wall-clock start of that entry (carried forward, so it can't drift)
-    const seqDoneMsRef = useRef(0);        // total length of the entries already finished
+    const seqStartBeatRef = useRef(0);     // bars-mode entries: elapsed-beat count at their start
+    const seqDoneSecRef = useRef(0);       // total length (s) of the entries already finished
     const settingsRef = useRef(null);
 
     // --- SCHEDULER REFS ---
@@ -349,25 +350,49 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         if (settings.mode === 'sequence') {
             const segs = settings.segments;
             const seg = segs[seqIndexRef.current];
-            const segMs = seg.seconds * 1000;
-            const segElapsed = Math.max(0, now - seqStartMsRef.current);
-            const totalMs = segs.reduce((sum, g) => sum + g.seconds * 1000, 0);
+            const totalSec = segs.reduce((sum, g) => sum + g.seconds, 0);
 
-            setTotalProgress(Math.min(100, ((seqDoneMsRef.current + segElapsed) / totalMs) * 100));
+            // Bars-mode play entries end on the beat count, so the tempo change lands
+            // on the downbeat; everything else (time entries, rests) runs off the clock.
+            // The beat maths is the Trainer's bars mode: a sounding beat is 0 elapsed at
+            // its onset, growing to 1 as the next falls due.
+            const inBars = seg.type === 'play' && seg.bars != null;
+            const beatScale = 4 / settings.timeSigBottom;
+            const secPerBeat = (60.0 / bpmRef.current) * beatScale;
+            const beatFrac = (lastBeatTimeRef.current != null && secPerBeat > 0)
+                ? Math.min(Math.max((audioNow - lastBeatTimeRef.current) / secPerBeat, 0), 1)
+                : 0;
+            const elapsedBeats = Math.max(0, playedBeatsRef.current - 1 + beatFrac);
 
-            if (segElapsed >= segMs) {
+            const segThreshold = inBars ? seg.bars * settings.timeSigTop : seg.seconds * 1000;
+            const segElapsed = inBars
+                ? elapsedBeats - seqStartBeatRef.current
+                : Math.max(0, now - seqStartMsRef.current);
+            const segFraction = Math.min(Math.max(segElapsed / segThreshold, 0), 1);
+
+            setTotalProgress(Math.min(100, ((seqDoneSecRef.current + segFraction * seg.seconds) / totalSec) * 100));
+
+            if (segElapsed >= segThreshold) {
                 const next = seqIndexRef.current + 1;
                 if (next >= segs.length) {
                     stop();
                     return;
                 }
+                const nextSeg = segs[next];
                 seqIndexRef.current = next;
-                seqDoneMsRef.current += segMs;
-                seqStartMsRef.current += segMs;
+                seqDoneSecRef.current += seg.seconds;
+                // Where the next entry starts, on whichever ruler it uses. Carrying the
+                // previous start forward (rather than reading "now") keeps a run of
+                // same-kind entries from drifting; crossing between rulers re-anchors.
+                seqStartMsRef.current = inBars ? now : seqStartMsRef.current + segThreshold;
+                if (nextSeg.type === 'play' && nextSeg.bars != null) {
+                    seqStartBeatRef.current = inBars ? seqStartBeatRef.current + segThreshold
+                        : seg.type === 'rest' ? playedBeatsRef.current
+                        : elapsedBeats;
+                }
                 setSegmentIndex(next);
                 setStepProgress(0);
 
-                const nextSeg = segs[next];
                 if (nextSeg.type === 'rest') {
                     // The step structure guarantees a play entry follows a rest.
                     const upcomingBpm = segs[next + 1].bpm;
@@ -403,7 +428,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
                     muteStateRef.current = {...muteStateRef.current, resync: true};
                 }
             } else {
-                setStepProgress((segElapsed / segMs) * 100);
+                setStepProgress(segFraction * 100);
             }
         }
 
@@ -464,7 +489,8 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         completedRestMsRef.current = 0;
         muteStateRef.current = INITIAL_MUTE_STATE;
         seqIndexRef.current = 0;
-        seqDoneMsRef.current = 0;
+        seqDoneSecRef.current = 0;
+        seqStartBeatRef.current = 0;
         setSegmentIndex(settings.mode === 'sequence' ? 0 : -1);
         setIsResting(false);
 

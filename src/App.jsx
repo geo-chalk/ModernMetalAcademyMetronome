@@ -8,7 +8,9 @@ import {useWakeLock} from './hooks/useWakeLock';
 import {useFullscreen} from './hooks/useFullscreen';
 import {MIN_TAPS, useTapTempo} from './hooks/useTapTempo';
 import {BPM_MAX, BPM_MIN, clampBpm, snapBpm} from './constants/bpm';
-import {normaliseSteps, expandSteps, sequenceSeconds, DEFAULT_STEPS} from './constants/sequence';
+import {
+    normaliseSteps, normaliseUnit, expandSteps, sequenceSeconds, DEFAULT_STEPS, SEQUENCE_PRESETS
+} from './constants/sequence';
 import {usePresets} from './hooks/usePresets';
 import {useAccentPattern} from './hooks/useAccentPattern';
 
@@ -75,8 +77,15 @@ export default function App() {
     // and repaired on read, like presets.
     const [seqStored, setSeqSteps] = useLocalStorage('metronome_sequence', DEFAULT_STEPS);
     const seqSteps = useMemo(() => normaliseSteps(seqStored), [seqStored]);
-    const seqTimeline = useMemo(() => expandSteps(seqSteps), [seqSteps]);
-    const seqSeconds = useMemo(() => sequenceSeconds(seqSteps), [seqSteps]);
+    const [seqStoredUnit, setSeqUnit] = useLocalStorage('metronome_sequence_unit', 'time');
+    const seqUnit = normaliseUnit(seqStoredUnit);
+    // Bars lengths depend on the meter, so the timeline is rebuilt when it changes.
+    const seqTimeline = useMemo(
+        () => expandSteps(seqSteps, seqUnit, timeSigTop, timeSigBottom),
+        [seqSteps, seqUnit, timeSigTop, timeSigBottom]);
+    const seqSeconds = useMemo(
+        () => sequenceSeconds(seqSteps, seqUnit, timeSigTop, timeSigBottom),
+        [seqSteps, seqUnit, timeSigTop, timeSigBottom]);
 
     // Bar muting is a practice modifier on top of any mode, so it isn't part of presets.
     const [muteEnabled, setMuteEnabled] = useLocalStorage('metronome_mute_enabled', false);
@@ -316,6 +325,44 @@ export default function App() {
         setSelectedPresetId(prev => (prev === id ? '' : prev));
     }, [removePreset]);
 
+    // Sequence presets: the same machinery, with their own list. A sequence preset is
+    // the routine, its length unit and the meter it was built for.
+    const {
+        presets: seqPresets, save: saveSeqPreset, load: loadSeqPreset,
+        remove: removeSeqPreset, isFull: seqPresetsFull
+    } = usePresets(SEQUENCE_PRESETS);
+    const [selectedSeqPresetId, setSelectedSeqPresetId] = useState('');
+
+    const handleSelectSeqPreset = useCallback((id) => {
+        setSelectedSeqPresetId(id);
+        if (!id) return;
+
+        const p = loadSeqPreset(id);
+        if (!p) {
+            setSelectedSeqPresetId('');
+            return;
+        }
+
+        setSeqSteps(p.steps);
+        setSeqUnit(p.unit);
+        setTimeSigTop(p.timeSigTop);
+        setTimeSigBottom(p.timeSigBottom);
+        setCountdownBars(p.countdownBars);
+        setAccentsForSig(p.timeSigTop, p.timeSigBottom, p.accents);
+    }, [loadSeqPreset, setSeqSteps, setSeqUnit, setTimeSigTop, setTimeSigBottom, setCountdownBars, setAccentsForSig]);
+
+    const handleSaveSeqPreset = useCallback((name) => {
+        const saved = saveSeqPreset(name, {
+            steps: seqSteps, unit: seqUnit, timeSigTop, timeSigBottom, countdownBars, accents
+        });
+        if (saved) setSelectedSeqPresetId(saved.id);
+    }, [saveSeqPreset, seqSteps, seqUnit, timeSigTop, timeSigBottom, countdownBars, accents]);
+
+    const handleDeleteSeqPreset = useCallback((id) => {
+        removeSeqPreset(id);
+        setSelectedSeqPresetId(prev => (prev === id ? '' : prev));
+    }, [removeSeqPreset]);
+
     // Keep the negative increment from ever exceeding the positive one,
     // so the see-saw ramp can never lower the net tempo.
     const handleIncrementChange = (val) => {
@@ -487,7 +534,19 @@ export default function App() {
                         {mode === 'sequence' && (
                             <div className={`pt-4 border-t border-white/5 ${
                                 twoCol ? 'twocol:pt-0 twocol:border-t-0 twocol:border-l twocol:pl-6 twocol:min-h-0 twocol:overflow-y-auto twocol:overflow-x-hidden no-scrollbar touch-pan-y' : ''}`}>
+                                <div className={isActive ? 'opacity-50 pointer-events-none' : ''}>
+                                    <PresetBar
+                                        presets={seqPresets}
+                                        selectedId={selectedSeqPresetId}
+                                        onSelect={handleSelectSeqPreset}
+                                        onSave={handleSaveSeqPreset}
+                                        onDelete={handleDeleteSeqPreset}
+                                        isFull={seqPresetsFull}
+                                        disabled={isActive}
+                                    />
+                                </div>
                                 <SequenceEditor steps={seqSteps} setSteps={setSeqSteps}
+                                                unit={seqUnit} setUnit={setSeqUnit}
                                                 activeStep={seqTimeline[segmentIndex]?.step}
                                                 activeType={seqTimeline[segmentIndex]?.type}
                                                 locked={isActive} formatDuration={formatDuration}

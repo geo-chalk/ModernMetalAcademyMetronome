@@ -118,9 +118,11 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 Versioning follows the `version` field in `package.json`.
 
 ### 0.10.0 — Sequence mode
-* **A third mode, Sequence, for routines the Trainer's even ramp can't express** — e.g. 140 bpm for 1m, rest 10s, 150 bpm for 1m, rest 10s, 140 bpm for 1m, rest 10s, 130 bpm for 1m. Each step has a tempo and a length, plus an optional rest after it (the count-in leads back in at the next tempo, as in the Trainer). Up to 12 steps; **Add step** copies the last one. The session stops after the last step.
+* **A third mode, Sequence, for routines the Trainer's even ramp can't express** — e.g. 140 bpm for 1m, rest 10s, 150 bpm for 1m, rest 10s, 140 bpm for 1m, rest 10s, 130 bpm for 1m. Each step has a tempo and a length, plus an optional rest after it (the count-in leads back in at the next tempo, as in the Trainer). Up to 12 steps; **Add step** copies the last one, and the chevrons beside each step reorder it (its rest moves with it). The session stops after the last step.
 * The step that's playing lights up (blue while resting), and the progress bars show the current step and the whole sequence. Settings lock while it runs, like the Trainer, and **Mute bars** works on top of it.
-* Saved on the device with the other settings. It isn't part of Trainer presets yet.
+* **Length Type: Time or Bars**, like the Trainer's Interval Type. In Bars mode a step ends on a beat count rather than the clock, so the tempo change lands on the downbeat; a rest is still timed by the clock, at the tempo it returns to. Both sets of lengths are kept per step, so flipping the toggle loses nothing. Bar lengths follow the time signature, so changing it changes the total.
+* **Presets**: Sequence has its own preset list (save / load / delete above the editor), kept separate from the Trainer's. A preset holds the steps, the length type, the time signature, the count-in and the accent pattern.
+* Saved on the device with the other settings.
 
 ### 0.9.0 — Mute bars (play by heart)
 * **A practice modifier in every mode:** switch on **Mute bars** under the tempo slider and the click drops out for whole bars, so you hold the tempo yourself and find the downbeat where the click returns. The beat bars stay dark during a muted bar (no visual cue either), while Trainer timing and bars-mode progress carry on unaffected.
