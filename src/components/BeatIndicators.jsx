@@ -1,14 +1,15 @@
 import React, {memo} from "react";
 
 const BeatIndicators = memo(({
-                                 isActive, currentBeat, beatsPerMeasure, isResting, pulseTick,
+                                 isActive, currentBeat, beatsPerMeasure, isResting, pulseTick, barMuted = false,
                                  accents = [], accentsEnabled = true, onToggleAccent
                              }) => {
     const beats = Array.from({length: beatsPerMeasure || 4}, (_, i) => i + 1);
     const playing = isActive && !isResting;
 
     return (
-        <div className="flex justify-center gap-2 mb-4 short:mb-0 h-4">
+        <div className={`flex justify-center gap-2 mb-4 short:mb-0 h-4 transition-opacity duration-150 ${
+            playing && barMuted ? 'opacity-30' : ''}`}>
             {beats.map((b) => {
                 const accented = accents.includes(b);
                 // The mark dims rather than disappearing when accents are switched

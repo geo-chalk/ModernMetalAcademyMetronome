@@ -2,14 +2,16 @@ import {useState, useRef, useEffect, useCallback} from 'react';
 import * as Tone from 'tone';
 import {useLocalStorage} from './useLocalStorage';
 import {SOUND_ASSETS} from '../constants/sounds';
+import {INITIAL_MUTE_STATE, nextBarMute} from '../constants/barMute';
 
-export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPattern) => {
+export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPattern, muteSettings) => {
     const [bpm, setBpm] = useState(initialBpm);
     const [isActive, setIsActive] = useState(false);
     const [currentBeat, setCurrentBeat] = useState(1);
     const [stepProgress, setStepProgress] = useState(0);
     const [totalProgress, setTotalProgress] = useState(0);
     const [isResting, setIsResting] = useState(false);
+    const [isBarMuted, setIsBarMuted] = useState(false);   // the bar being heard right now is silent
     const [beatTick, setBeatTick] = useState(0);   // increments each beat — restarts the pulse
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
     const [volume, setVolume] = useLocalStorage('metronome_volume', -6);
@@ -44,6 +46,11 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     const accentPatternRef = useRef(initialAccentPattern);
     const soundSettingsRef = useRef(initialSoundSettings);
     const bpmRef = useRef(initialBpm);
+
+    // Bar muting: {enabled, style: 'random'|'pattern', chance, on, off}. Mirrored into a
+    // ref so edits are heard on the next bar, even mid-run.
+    const muteSettingsRef = useRef(muteSettings);
+    const muteStateRef = useRef(INITIAL_MUTE_STATE);   // see constants/barMute.js
 
     useEffect(() => {
         clickSynth.current = new Tone.Synth({
@@ -96,12 +103,26 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         accentPatternRef.current = initialAccentPattern;
     }, [initialAccentPattern]);
 
+    useEffect(() => {
+        muteSettingsRef.current = muteSettings;
+    }, [muteSettings]);
+
+    const decideBarMute = () => {
+        muteStateRef.current = nextBarMute(muteSettingsRef.current, muteStateRef.current);
+    };
+
     // --- CORE SCHEDULER LOGIC ---
     const scheduleNote = (beatNumber, time) => {
         const isAccented = accentPatternRef.current?.includes(beatNumber) ?? false;
 
-        // Push to visual queue
-        notesInQueue.current.push({beat: beatNumber, time: time});
+        if (beatNumber === 1) decideBarMute();
+        const muted = muteStateRef.current.muted;
+
+        // Push to visual queue. A muted bar is still queued: the beat bars and
+        // bars-mode progress keep running, only the click is skipped.
+        notesInQueue.current.push({beat: beatNumber, time: time, muted});
+
+        if (muted) return;
 
         const source = (isAccentEnabledRef.current && isAccented)
             ? soundSettingsRef.current.metronomeAccent
@@ -184,6 +205,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         const VISUAL_LEAD = 0.03;
         while (notesInQueue.current.length > 0 && notesInQueue.current[0].time - VISUAL_LEAD < audioNow) {
             setCurrentBeat(notesInQueue.current[0].beat);
+            setIsBarMuted(notesInQueue.current[0].muted);
             setBeatTick(t => t + 1);
             lastBeatTimeRef.current = notesInQueue.current[0].time;
             notesInQueue.current.shift();
@@ -272,6 +294,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
                 const goingUp = negIncr === 0 || stepCountRef.current % 2 === 0;
                 const newBpm = bpmRef.current + (goingUp ? settings.increment : -negIncr);
                 bpmRef.current = newBpm;   // sync now so a rest count-in uses the new tempo
+                muteStateRef.current = {...muteStateRef.current, resync: true};   // let the new tempo (or the return from a rest) be heard
                 setBpm(newBpm);
                 stepCountRef.current++;
 
@@ -322,6 +345,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
 
         setIsActive(false);
         setIsResting(false);
+        setIsBarMuted(false);
         setCurrentBeat(0);   // 0 = no beat lit (nothing lights during the count-in)
         setStepProgress(0);
         setTotalProgress(0);
@@ -361,6 +385,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         lastBeatTimeRef.current = null;
         restingRef.current = false;
         completedRestMsRef.current = 0;
+        muteStateRef.current = INITIAL_MUTE_STATE;
         setIsResting(false);
 
         // Start scheduler heartbeat
@@ -374,7 +399,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     };
 
     return {
-        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, beatTick, start, stop,
+        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, isBarMuted, beatTick, start, stop,
         beatsPerMeasure, volume, setVolume, isAccentEnabled, setIsAccentEnabled
     };
 };
