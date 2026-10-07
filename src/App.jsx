@@ -16,6 +16,7 @@ import MarkedSlider from './components/MarkedSlider';
 import BeatIndicators from './components/BeatIndicators';
 import BPMDisplay from './components/BPMDisplay';
 import TrainerProgress from './components/TrainerProgress';
+import ElapsedTime from './components/ElapsedTime';
 import TimeSignatureSelector from './components/TimeSignatureSelector';
 import VolumeSlider from './components/VolumeSlider';
 import PlayButton from './components/PlayButton';
@@ -118,6 +119,7 @@ export default function App() {
         stepProgress,
         totalProgress,
         isResting,
+        elapsedSeconds,
         beatTick,
         start,
         stop,
@@ -435,6 +437,8 @@ export default function App() {
 
                     <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
                                      isResting={isResting} mode={mode}/>
+
+                    {mode === 'constant' && <ElapsedTime isActive={isActive} seconds={elapsedSeconds}/>}
 
                         <StartBPMSlider
                             label={mode === 'trainer' ? "Start BPM" : "Tempo"}
