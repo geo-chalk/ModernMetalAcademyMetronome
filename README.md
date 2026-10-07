@@ -123,6 +123,9 @@ Versioning follows the `version` field in `package.json`.
 * **Pattern** plays N bars then mutes M, repeating (3 on / 1 off by default).
 * The first bar after the session starts, a tempo change or a rest always plays, so there's a click to lock onto. Settings apply on the next bar, even while running, and are remembered on the device (not part of presets).
 
+### 0.8.6 — Elapsed time in Constant mode
+* Constant mode shows how long the current run has been going (m:ss, h:mm:ss after an hour) under the beat bars, so you can see how long you've been drilling a tempo. It starts when the count-in ends and resets on Stop.
+
 ### 0.8.5 — Menu scrolls on short screens
 * The side menu couldn't scroll, so in landscape on a phone the Fullscreen and Vertical layout rows sat below the bottom edge, out of reach. It scrolls now (it sat inside the page's no-touch-scroll container and never had overflow set), and packs tighter on short screens so less of it needs scrolling.
 
