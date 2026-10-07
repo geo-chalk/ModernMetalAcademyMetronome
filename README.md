@@ -117,6 +117,9 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
+### 0.11.1 — Arrow keys work again after using a slider
+* After dragging the volume or any slider with the mouse, it kept keyboard focus (highlighted), so the arrow keys moved that slider instead of the tempo. The same happened after picking from a dropdown (Count-in, time signature, presets). Focus is now handed back once the mouse is done, so the arrows always nudge the tempo. Tabbing to a slider with the keyboard still lets you adjust it with the arrows.
+
 ### 0.11.0 — Mute bars: max in a row, and an M shortcut
 * **Random** mute bars gets a **Max in a row** setting (1–4 bars). It caps how many muted bars can come back to back; at 1 (the default, and how it behaved before) a muted bar is always followed by one that plays. Higher values give longer silent stretches, and the first bar after a start, tempo change or rest still always plays.
 * **Press M** to switch Mute bars on or off, including while playing (the next bar picks it up). It's listed with the other shortcuts in Info.
