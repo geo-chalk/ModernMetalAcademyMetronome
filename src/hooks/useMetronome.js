@@ -1,4 +1,5 @@
 import {useState, useRef, useEffect, useCallback} from 'react';
+import {flushSync} from 'react-dom';
 import * as Tone from 'tone';
 import {useLocalStorage} from './useLocalStorage';
 import {SOUND_ASSETS} from '../constants/sounds';
@@ -43,7 +44,8 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     const beatCounterRef = useRef(0);
     const countdownRemainingRef = useRef(0); // count-in beats left to schedule
     const countdownIndexRef = useRef(0);     // count-in beat position (for accents)
-    const notesInQueue = useRef([]); // Visual sync queue
+    const notesInQueue = useRef([]); // Engine queue: beats scheduled but not yet due on the context clock
+    const visualQueue = useRef([]);  // Beat-light queue: the same beats, drained on the *heard* clock
     const LOOKAHEAD_MS = 100.0; // How far to schedule into the future
     const SCHEDULE_INTERVAL_MS = 25.0; // How often to check for new notes
     const timerIDRef = useRef(null);
@@ -113,6 +115,34 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         muteSettingsRef.current = muteSettings;
     }, [muteSettings]);
 
+    // Tone wraps the AudioContext in standardized-audio-context, which exposes
+    // neither outputLatency nor getOutputTimestamp. The native context sits
+    // behind the wrapper's (private) _nativeAudioContext; should that field ever
+    // go away, this degrades to the wrapper, i.e. no latency compensation.
+    const nativeAudioContext = () => {
+        const raw = Tone.getContext().rawContext;
+        const native = raw._nativeAudioContext;
+        return (native && typeof native.currentTime === 'number') ? native : raw;
+    };
+
+    // Audio-context time that is being heard *right now*. The context clock
+    // (currentTime) runs ahead of the speakers by the device's output latency —
+    // ~30ms on built-in speakers, 100-250ms on Bluetooth — so a light fired on
+    // currentTime leads the click by that much. Prefers the spec'd output
+    // timestamp (extrapolated from performance.now()), falls back to
+    // currentTime - outputLatency, then to currentTime where neither exists.
+    const heardNow = () => {
+        const ctx = nativeAudioContext();
+        if (typeof ctx.getOutputTimestamp === 'function') {
+            const ts = ctx.getOutputTimestamp();
+            // Zeros while the context is suspended.
+            if (ts && ts.performanceTime > 0) {
+                return ts.contextTime + (performance.now() - ts.performanceTime) / 1000;
+            }
+        }
+        return ctx.currentTime - (ctx.outputLatency || 0);
+    };
+
     const decideBarMute = () => {
         muteStateRef.current = nextBarMute(muteSettingsRef.current, muteStateRef.current);
     };
@@ -124,9 +154,12 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         if (beatNumber === 1) decideBarMute();
         const muted = muteStateRef.current.muted;
 
-        // Push to visual queue. A muted bar is still queued: the beat bars and
-        // bars-mode progress keep running, only the click is skipped.
-        notesInQueue.current.push({beat: beatNumber, time: time, muted});
+        // Queue for the engine (progress, interval boundaries) and for the beat
+        // light. A muted bar is still queued: the beat bars and bars-mode
+        // progress keep running, only the click is skipped.
+        const note = {beat: beatNumber, time: time, muted};
+        notesInQueue.current.push(note);
+        visualQueue.current.push(note);
 
         if (muted) return;
 
@@ -201,21 +234,35 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
 
         const now = Date.now();
         const toneNow = Tone.now();          // scheduling clock (includes look-ahead)
-        const audioNow = Tone.immediate();   // actual playback time (no look-ahead) — for visuals
+        const audioNow = Tone.immediate();   // context time without look-ahead — engine bookkeeping (the light uses heardNow)
         const settings = settingsRef.current;
 
-        // Visual Sync: fire the beat pulse ~one frame before the click sounds, so that
-        // after React-render + display latency the flash lands *with* the click rather
-        // than a hair late. (VISUAL_LEAD is small — the old ~100ms look-ahead was the
-        // "animation before the sound" bug; this just offsets render latency.)
-        const VISUAL_LEAD = 0.03;
-        while (notesInQueue.current.length > 0 && notesInQueue.current[0].time - VISUAL_LEAD < audioNow) {
-            setCurrentBeat(notesInQueue.current[0].beat);
-            setIsBarMuted(notesInQueue.current[0].muted);
-            setBeatTick(t => t + 1);
+        // Engine bookkeeping runs on the context clock: a beat counts as played
+        // as soon as it is due there. Interval/segment boundaries derive from this
+        // and race the look-ahead scheduler, so they must not wait for the speaker.
+        while (notesInQueue.current.length > 0 && notesInQueue.current[0].time < audioNow) {
             lastBeatTimeRef.current = notesInQueue.current[0].time;
             notesInQueue.current.shift();
             playedBeatsRef.current++;
+        }
+
+        // Beat light runs on the *heard* clock (see heardNow), with a small lead
+        // for rAF quantisation + display latency so the flash lands *with* the click.
+        // A backlog (e.g. tab was hidden) collapses to the latest due beat, and the
+        // state is flushed synchronously so the DOM change paints on this frame
+        // rather than the next.
+        const VISUAL_LEAD = 0.03;
+        const heard = heardNow();
+        let dueNote = null;
+        while (visualQueue.current.length > 0 && visualQueue.current[0].time - VISUAL_LEAD < heard) {
+            dueNote = visualQueue.current.shift();
+        }
+        if (dueNote) {
+            flushSync(() => {
+                setCurrentBeat(dueNote.beat);
+                setIsBarMuted(dueNote.muted);
+                setBeatTick(t => t + 1);
+            });
         }
 
         // Elapsed play time. The session clock starts in the future during the count-in
@@ -452,6 +499,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         setElapsedSeconds(0);
         setSegmentIndex(-1);
         notesInQueue.current = [];
+        visualQueue.current = [];
         sessionStartTimeRef.current = null;
     };
 
