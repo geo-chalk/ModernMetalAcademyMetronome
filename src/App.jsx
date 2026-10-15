@@ -13,6 +13,7 @@ import {
 } from './constants/sequence';
 import {usePresets} from './hooks/usePresets';
 import {useAccentPattern} from './hooks/useAccentPattern';
+import {mutedFor} from './constants/accents';
 
 // Components
 import MarkedSlider from './components/MarkedSlider';
@@ -132,10 +133,12 @@ export default function App() {
         }
     }, [soundSettings, setSoundSettings]);
 
-    // Which beats of the bar carry the accent — clicked on the beat bars, kept
-    // per time signature. Declared above useMetronome because the engine takes
-    // the pattern; the switch above only decides whether it's heard.
-    const {accents, toggleAccent, setAccentsForSig} = useAccentPattern(timeSigTop, timeSigBottom);
+    // Which beats of the bar carry the accent and which are muted — clicked on
+    // the beat bars, kept per time signature. Declared above useMetronome because
+    // the engine takes the pattern; the switch above only decides whether the
+    // accents are heard.
+    const {pattern, cycleBeat, setPatternForSig, resetPattern, isDefault: patternIsDefault} =
+        useAccentPattern(timeSigTop, timeSigBottom);
 
     const muteSettings = useMemo(() => ({
         enabled: muteEnabled, style: muteStyle, chance: muteChance, maxRun: muteMaxRun, on: muteOn, off: muteOff
@@ -149,7 +152,7 @@ export default function App() {
         stepProgress,
         totalProgress,
         isResting,
-        isBarMuted,
+        isBeatMuted,
         elapsedSeconds,
         segmentIndex,
         beatTick,
@@ -160,7 +163,7 @@ export default function App() {
         setVolume,
         isAccentEnabled,
         setIsAccentEnabled
-    } = useMetronome(startBpm, soundSettings[activePack], accents, muteSettings);
+    } = useMetronome(startBpm, soundSettings[activePack], pattern, muteSettings);
 
 
     const handleStart = useCallback(() => {
@@ -264,6 +267,15 @@ export default function App() {
         setIsAccentEnabled(on => !on);
     }, [accentKeyEnabled, setIsAccentEnabled]);
 
+    // A beat-bar click cycles plain → accented → muted with the switch on; with
+    // it off, plain ↔ muted on a separate layer that leaves the accent-mode
+    // pattern untouched (see constants/accents.js). The bars show whichever
+    // layer the switch selects.
+    const cycleBeatWithSwitch = useCallback((beat) => {
+        cycleBeat(beat, isAccentEnabled);
+    }, [cycleBeat, isAccentEnabled]);
+    const mutedNow = mutedFor(pattern, isAccentEnabled);
+
     // The Mute bars switch lives on the playing screens only, so that's where M works.
     // Like the accent key it's live mid-run: the next bar picks the change up.
     const toggleMute = useCallback(() => {
@@ -312,22 +324,22 @@ export default function App() {
         setLockFinalBpm(p.lockFinalBpm);
         // Written against the preset's own signature, not the one on screen —
         // the setters above haven't taken effect yet at this point.
-        setAccentsForSig(p.timeSigTop, p.timeSigBottom, p.accents);
+        setPatternForSig(p.timeSigTop, p.timeSigBottom, {accents: p.accents, muted: p.mutedBeats, mutedOff: p.mutedBeatsAccentsOff});
     }, [loadPreset, setStartBpm, setBpm, setIncrement, setNegativeIncrement, setIntervalUnit,
         setStepSeconds, setTotalSeconds, setIntervalBars, setTotalReps, setRestSeconds,
         setRestBars, setTimeSigTop, setTimeSigBottom, setCountdownBars, setLockFinalBpm,
-        setAccentsForSig]);
+        setPatternForSig]);
 
     const handleSavePreset = useCallback((name) => {
         const saved = savePreset(name, {
             startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds,
             intervalBars, totalReps, restSeconds, restBars, timeSigTop, timeSigBottom,
-            countdownBars, lockFinalBpm, accents
+            countdownBars, lockFinalBpm, accents: pattern.accents, mutedBeats: pattern.muted, mutedBeatsAccentsOff: pattern.mutedOff
         });
         if (saved) setSelectedPresetId(saved.id);
     }, [savePreset, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds,
         totalSeconds, intervalBars, totalReps, restSeconds, restBars, timeSigTop,
-        timeSigBottom, countdownBars, lockFinalBpm, accents]);
+        timeSigBottom, countdownBars, lockFinalBpm, pattern]);
 
     const handleDeletePreset = useCallback((id) => {
         removePreset(id);
@@ -357,15 +369,16 @@ export default function App() {
         setTimeSigTop(p.timeSigTop);
         setTimeSigBottom(p.timeSigBottom);
         setCountdownBars(p.countdownBars);
-        setAccentsForSig(p.timeSigTop, p.timeSigBottom, p.accents);
-    }, [loadSeqPreset, setSeqSteps, setSeqUnit, setTimeSigTop, setTimeSigBottom, setCountdownBars, setAccentsForSig]);
+        setPatternForSig(p.timeSigTop, p.timeSigBottom, {accents: p.accents, muted: p.mutedBeats, mutedOff: p.mutedBeatsAccentsOff});
+    }, [loadSeqPreset, setSeqSteps, setSeqUnit, setTimeSigTop, setTimeSigBottom, setCountdownBars, setPatternForSig]);
 
     const handleSaveSeqPreset = useCallback((name) => {
         const saved = saveSeqPreset(name, {
-            steps: seqSteps, unit: seqUnit, timeSigTop, timeSigBottom, countdownBars, accents
+            steps: seqSteps, unit: seqUnit, timeSigTop, timeSigBottom, countdownBars,
+            accents: pattern.accents, mutedBeats: pattern.muted, mutedBeatsAccentsOff: pattern.mutedOff
         });
         if (saved) setSelectedSeqPresetId(saved.id);
-    }, [saveSeqPreset, seqSteps, seqUnit, timeSigTop, timeSigBottom, countdownBars, accents]);
+    }, [saveSeqPreset, seqSteps, seqUnit, timeSigTop, timeSigBottom, countdownBars, pattern]);
 
     const handleDeleteSeqPreset = useCallback((id) => {
         removeSeqPreset(id);
@@ -511,9 +524,11 @@ export default function App() {
 
                     <BeatIndicators isActive={isActive} currentBeat={currentBeat}
                                     beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}
-                                    isResting={isResting} pulseTick={beatTick} barMuted={isBarMuted}
-                                    accents={accents} accentsEnabled={isAccentEnabled}
-                                    onToggleAccent={toggleAccent}/>
+                                    isResting={isResting} pulseTick={beatTick} beatMuted={isBeatMuted}
+                                    accents={pattern.accents} muted={mutedNow}
+                                    accentsEnabled={isAccentEnabled} onCycleBeat={cycleBeatWithSwitch}
+                                    onReset={resetPattern} canReset={!patternIsDefault}
+                                    sigLabel={`${timeSigTop}/${timeSigBottom}`}/>
 
                     <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
                                      isResting={isResting} mode={mode}

@@ -27,7 +27,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 
 ### Rhythm & feel
 * **Flexible time signatures**, including irregular meters (5/8, 6/8, 7/8, 9/8, 12/8) with denominators 2–16.
-* **Clickable accents** — click the beat bars to choose which beats are accented; each time signature keeps its own pattern, and odd meters start from the usual grouping (7/8 on 1, 4, 6). An accent toggle mutes them all without losing the pattern.
+* **Clickable beats** — click a beat bar to cycle it through accented → muted → normal. An accented beat gets the accent sound; a muted beat is silent and stays dark, so you can drop single beats out of the bar (the count-in still clicks every beat). Each time signature keeps its own pattern, and odd meters start from the usual grouping (7/8 on 1, 4, 6); a reset arrow beside the bars puts a changed meter back to its default. An accent toggle mutes the accents without losing the pattern.
 * **Count-in** — 0–4 lead-in bars before a session starts.
 
 ### Sound
@@ -116,6 +116,13 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 ## 📝 Changelog
 
 Versioning follows the `version` field in `package.json`.
+
+### 0.12.0 — Mute single beats
+* **A beat bar now has three states.** One click accents a beat, as before; a second click **mutes** it; a third sets it back to normal. A muted beat is drawn as a hollow bar and, while playing, gets no click and no light — Mute bars for a single beat, so you can drop beat 3 out of 4/4 and hold the inner pulse yourself. It works on top of Mute bars, and like accents it's live mid-run: the next beat picks the change up.
+* The **count-in still clicks every beat** — it's there to give you the tempo — and the Accents toggle (`A`) keeps its meaning: it silences the accent sound and leaves muted beats muted. With the toggle off, a click just toggles a beat between normal and muted, on a layer of its own: the accents you set, and the beats you muted alongside them, are kept and come back exactly as you left them when the toggle goes back on.
+* **One beat always stays audible.** The click that would mute the last sounding beat is refused (with accents on, that beat goes back to normal instead), and a saved pattern that mutes the whole bar gets its downbeat back.
+* **Reset.** Once a meter's pattern differs from its default, a small arrow appears to the right of the beat bars; it puts that meter (accents and muted beats, in both switch positions) back to the default, and goes away again.
+* Muted beats are kept per time signature and saved with Trainer and Sequence presets, alongside the accents. Patterns and presets from earlier versions carry over with nothing muted.
 
 ### 0.11.1 — Arrow keys work again after using a slider
 * After dragging the volume or any slider with the mouse, it kept keyboard focus (highlighted), so the arrow keys moved that slider instead of the tempo. The same happened after picking from a dropdown (Count-in, time signature, presets). Focus is now handed back once the mouse is done, so the arrows always nudge the tempo. Tabbing to a slider with the keyboard still lets you adjust it with the arrows.

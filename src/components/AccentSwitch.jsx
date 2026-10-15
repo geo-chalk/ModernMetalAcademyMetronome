@@ -10,6 +10,8 @@ const AccentSwitch = ({ isOn, onToggle, disabled = false }) => {
             <button
                 onClick={onToggle}
                 disabled={disabled}
+                aria-label="Accents"
+                aria-pressed={isOn}
                 // The pill is 36x20; the pseudo-element pads the hit box out to ~52x36
                 // without changing how it looks (same idiom as BeatIndicators).
                 className={`relative w-9 h-5 rounded-full transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40

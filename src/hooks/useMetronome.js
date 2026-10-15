@@ -5,14 +5,14 @@ import {useLocalStorage} from './useLocalStorage';
 import {SOUND_ASSETS} from '../constants/sounds';
 import {INITIAL_MUTE_STATE, nextBarMute} from '../constants/barMute';
 
-export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPattern, muteSettings) => {
+export const useMetronome = (initialBpm, initialSoundSettings, beatPattern, muteSettings) => {
     const [bpm, setBpm] = useState(initialBpm);
     const [isActive, setIsActive] = useState(false);
     const [currentBeat, setCurrentBeat] = useState(1);
     const [stepProgress, setStepProgress] = useState(0);
     const [totalProgress, setTotalProgress] = useState(0);
     const [isResting, setIsResting] = useState(false);
-    const [isBarMuted, setIsBarMuted] = useState(false);   // the bar being heard right now is silent
+    const [isBeatMuted, setIsBeatMuted] = useState(false); // the beat being heard right now is silent (muted bar or muted beat)
     const [segmentIndex, setSegmentIndex] = useState(-1);   // Sequence mode: which timeline entry is playing (-1 = none)
     const [elapsedSeconds, setElapsedSeconds] = useState(0);   // whole seconds played (count-in and rests excluded)
     const [beatTick, setBeatTick] = useState(0);   // increments each beat — restarts the pulse
@@ -51,7 +51,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     const timerIDRef = useRef(null);
 
     const isAccentEnabledRef = useRef(isAccentEnabled);
-    const accentPatternRef = useRef(initialAccentPattern);
+    const beatPatternRef = useRef(beatPattern);
     const soundSettingsRef = useRef(initialSoundSettings);
     const bpmRef = useRef(initialBpm);
 
@@ -104,12 +104,12 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         isAccentEnabledRef.current = isAccentEnabled;
     }, [isAccentEnabled]);
 
-    // The clicked accent pattern, mirrored for the scheduler. Like the accent
-    // switch, it stays live mid-run: the bars are clickable while playing, and
-    // the next scheduled beat should already hear the change.
+    // The clicked beat pattern ({accents, muted, mutedOff}), mirrored for the scheduler.
+    // Like the accent switch, it stays live mid-run: the bars are clickable while
+    // playing, and the next scheduled beat should already hear the change.
     useEffect(() => {
-        accentPatternRef.current = initialAccentPattern;
-    }, [initialAccentPattern]);
+        beatPatternRef.current = beatPattern;
+    }, [beatPattern]);
 
     useEffect(() => {
         muteSettingsRef.current = muteSettings;
@@ -149,13 +149,19 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
 
     // --- CORE SCHEDULER LOGIC ---
     const scheduleNote = (beatNumber, time) => {
-        const isAccented = accentPatternRef.current?.includes(beatNumber) ?? false;
+        const pattern = beatPatternRef.current;
+        const isAccented = pattern?.accents?.includes(beatNumber) ?? false;
 
+        // Silent either because the whole bar is muted (Mute bars) or because
+        // this beat is muted on the beat bars. Both look the same from here.
+        // Which mute layer applies follows the Accents switch (see
+        // constants/accents.js), so flipping it mid-run swaps the mutes too.
         if (beatNumber === 1) decideBarMute();
-        const muted = muteStateRef.current.muted;
+        const mutedBeats = isAccentEnabledRef.current ? pattern?.muted : pattern?.mutedOff;
+        const muted = muteStateRef.current.muted || (mutedBeats?.includes(beatNumber) ?? false);
 
         // Queue for the engine (progress, interval boundaries) and for the beat
-        // light. A muted bar is still queued: the beat bars and bars-mode
+        // light. A muted beat is still queued: the beat bars and bars-mode
         // progress keep running, only the click is skipped.
         const note = {beat: beatNumber, time: time, muted};
         notesInQueue.current.push(note);
@@ -191,7 +197,10 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     const scheduleCountdownNote = (time) => {
         const settings = settingsRef.current;
         const countdownBeat = (countdownIndexRef.current % settings.timeSigTop) + 1;
-        const isAccented = accentPatternRef.current?.includes(countdownBeat) ?? false;
+        // Accents carry into the count-in; muted beats don't. The count-in is
+        // there to give you the tempo, so every beat of it clicks (Mute bars
+        // leaves it alone for the same reason).
+        const isAccented = beatPatternRef.current?.accents?.includes(countdownBeat) ?? false;
 
         const source = (isAccentEnabledRef.current && isAccented)
             ? soundSettingsRef.current.countInAccent
@@ -260,7 +269,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
         if (dueNote) {
             flushSync(() => {
                 setCurrentBeat(dueNote.beat);
-                setIsBarMuted(dueNote.muted);
+                setIsBeatMuted(dueNote.muted);
                 setBeatTick(t => t + 1);
             });
         }
@@ -492,7 +501,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
 
         setIsActive(false);
         setIsResting(false);
-        setIsBarMuted(false);
+        setIsBeatMuted(false);
         setCurrentBeat(0);   // 0 = no beat lit (nothing lights during the count-in)
         setStepProgress(0);
         setTotalProgress(0);
@@ -554,7 +563,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, initialAccentPatt
     };
 
     return {
-        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, isBarMuted, elapsedSeconds, segmentIndex, beatTick, start, stop,
+        bpm, setBpm, isActive, currentBeat, stepProgress, totalProgress, isResting, isBeatMuted, elapsedSeconds, segmentIndex, beatTick, start, stop,
         beatsPerMeasure, volume, setVolume, isAccentEnabled, setIsAccentEnabled
     };
 };
