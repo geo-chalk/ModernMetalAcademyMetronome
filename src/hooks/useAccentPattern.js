@@ -1,46 +1,71 @@
 import {useCallback, useMemo} from 'react';
 import {useLocalStorage} from './useLocalStorage';
-import {defaultAccentsFor, normaliseAccents, sigKey} from '../constants/accents';
+import {cycleBeat as cycle, defaultPatternFor, isDefaultPattern, normalisePattern, sigKey} from '../constants/accents';
 
 const STORAGE_KEY = 'metronome_accent_pattern';
 
 /**
- * The accented beats of the current bar, editable by clicking the beat bars.
+ * The beat pattern of the current bar — which beats are accented and which are
+ * muted — editable by clicking the beat bars.
  *
- * Stored as a map of signature -> beats rather than one flat array, so a 7/8
- * grouping you worked out survives a trip through 4/4 and back. A signature
- * only gets an entry once you've actually changed it; everything else resolves
- * to its default on read, which keeps the store small and means a build that
- * changes a default is picked up by anyone who never overrode it.
+ * Stored as a map of signature -> {accents, muted} rather than one flat pattern,
+ * so a 7/8 grouping you worked out survives a trip through 4/4 and back. A
+ * signature only gets an entry once you've actually changed it; everything else
+ * resolves to its default on read, which keeps the store small and means a
+ * build that changes a default is picked up by anyone who never overrode it.
+ *
+ * Entries written before muting existed are bare arrays of accented beats;
+ * normalisePattern reads those as-is, so the upgrade loses nothing.
  */
 export const useAccentPattern = (timeSigTop, timeSigBottom) => {
     const [store, setStore] = useLocalStorage(STORAGE_KEY, {});
     const key = sigKey(timeSigTop, timeSigBottom);
 
-    const accents = useMemo(
-        () => normaliseAccents(store?.[key] ?? defaultAccentsFor(timeSigTop, timeSigBottom), timeSigTop),
+    const pattern = useMemo(
+        () => normalisePattern(store?.[key] ?? defaultPatternFor(timeSigTop, timeSigBottom), timeSigTop, timeSigBottom),
         [store, key, timeSigTop, timeSigBottom]
     );
 
-    const write = useCallback((entryKey, beats, top) => {
-        setStore(prev => ({
-            ...(prev && typeof prev === 'object' ? prev : {}),
-            [entryKey]: normaliseAccents(beats, top)
-        }));
+    // Functional updates throughout: the next pattern is computed from the
+    // store as it is when the write lands, not from the render that queued it,
+    // so two clicks that arrive before a re-render still count as two steps.
+    const write = useCallback((entryKey, next, top, bottom) => {
+        setStore(prev => {
+            const base = prev && typeof prev === 'object' ? prev : {};
+            const current = normalisePattern(base[entryKey] ?? defaultPatternFor(top, bottom), top, bottom);
+            const value = typeof next === 'function' ? next(current) : next;
+            return {...base, [entryKey]: normalisePattern(value, top, bottom)};
+        });
     }, [setStore]);
 
-    const toggleAccent = useCallback((beat) => {
-        const base = normaliseAccents(
-            store?.[key] ?? defaultAccentsFor(timeSigTop, timeSigBottom), timeSigTop);
-        write(key, base.includes(beat) ? base.filter(b => b !== beat) : [...base, beat], timeSigTop);
-    }, [store, key, timeSigTop, timeSigBottom, write]);
+    // accentsEnabled is the Accents switch: off, the cycle skips the accented
+    // state (see constants/accents.js).
+    const cycleBeat = useCallback((beat, accentsEnabled = true) => {
+        write(key, current => cycle(current, beat, accentsEnabled, timeSigTop), timeSigTop, timeSigBottom);
+    }, [key, timeSigTop, timeSigBottom, write]);
 
     // The signature is passed in rather than taken from the current render:
     // loading a preset sets the meter and the pattern in the same batch, so the
     // key closed over above would still be the meter we're leaving.
-    const setAccentsForSig = useCallback((top, bottom, beats) => {
-        write(sigKey(top, bottom), beats, top);
+    const setPatternForSig = useCallback((top, bottom, next) => {
+        write(sigKey(top, bottom), next, top, bottom);
     }, [write]);
 
-    return {accents, toggleAccent, setAccentsForSig};
+    // Reset removes the entry rather than writing the default into it: a
+    // missing entry resolves to the default on read, so a reset meter also
+    // picks up any later change to its default, which a written copy wouldn't.
+    const resetPattern = useCallback(() => {
+        setStore(prev => {
+            if (!prev || typeof prev !== 'object' || !(key in prev)) return prev;
+            const {[key]: _, ...rest} = prev;
+            return rest;
+        });
+    }, [setStore, key]);
+
+    const isDefault = useMemo(
+        () => isDefaultPattern(pattern, timeSigTop, timeSigBottom),
+        [pattern, timeSigTop, timeSigBottom]
+    );
+
+    return {pattern, cycleBeat, setPatternForSig, resetPattern, isDefault};
 };

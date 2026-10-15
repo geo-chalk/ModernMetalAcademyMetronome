@@ -91,10 +91,16 @@ const Info = () => {
                 the <Em>Accents</Em> toggle mutes or unmutes the accented beats.</>
         },
         {
-            term: "Accent pattern",
-            desc: <>Click the beat bars to choose which beats are accented — a marked beat turns white and gets
-                the accent sound. Each time signature keeps its own pattern, odd meters start from the usual
-                grouping (7/8 on 1, 4, 6), and the pattern is saved with a preset.</>
+            term: "Accents & muted beats",
+            desc: <>Click a beat bar to cycle it: one click <Em>accents</Em> it (white, with the accent sound), a
+                second <Em>mutes</Em> it (hollow — no click and no light, like Mute bars for a single beat), a
+                third sets it back to normal. With the Accents toggle off, a click just toggles a beat between
+                normal and muted, on its own layer: your accents and their muted beats are kept and come back
+                as you left them when the toggle goes back on. One beat always stays audible — the last one can't be
+                muted. The count-in still clicks every beat. Each time signature keeps
+                its own pattern, odd meters start from the usual grouping (7/8 on 1, 4, 6), and the pattern is
+                saved with a preset. Once you've changed it, a small <Em>reset</Em> arrow appears to the right
+                of the bars to put that meter back to its default.</>
         },
         {
             term: "Lock Final BPM",

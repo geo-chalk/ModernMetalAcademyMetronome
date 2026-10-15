@@ -1,5 +1,5 @@
 import {clampBpm} from './bpm';
-import {defaultAccentsFor, normaliseAccents} from './accents';
+import {defaultAccentsFor, normaliseAccents, normaliseMuted} from './accents';
 import {PRESET_FIELDS, TIME_SIG_BOTTOMS, clampField} from './presets';
 
 // A sequence is a list of steps: play at `bpm` for a length, then rest before the
@@ -102,7 +102,9 @@ export const captureSequencePreset = (state) => ({
     timeSigTop: state.timeSigTop,
     timeSigBottom: state.timeSigBottom,
     countdownBars: state.countdownBars,
-    accents: state.accents
+    accents: state.accents,
+    mutedBeats: state.mutedBeats,
+    mutedBeatsAccentsOff: state.mutedBeatsAccentsOff
 });
 
 export const validateSequencePreset = (raw) => {
@@ -110,15 +112,19 @@ export const validateSequencePreset = (raw) => {
 
     const timeSigTop = clampField(raw.timeSigTop, PRESET_FIELDS.timeSigTop);
     const timeSigBottom = TIME_SIG_BOTTOMS.includes(Number(raw.timeSigBottom)) ? Number(raw.timeSigBottom) : 4;
+    const accents = Array.isArray(raw.accents)
+        ? normaliseAccents(raw.accents, timeSigTop)
+        : defaultAccentsFor(timeSigTop, timeSigBottom);
     return {
         steps: normaliseSteps(raw.steps),
         unit: normaliseUnit(raw.unit),
         timeSigTop,
         timeSigBottom,
         countdownBars: clampField(raw.countdownBars, PRESET_FIELDS.countdownBars),
-        accents: Array.isArray(raw.accents)
-            ? normaliseAccents(raw.accents, timeSigTop)
-            : defaultAccentsFor(timeSigTop, timeSigBottom)
+        accents,
+        // Presets saved before muting existed have no mutedBeats: nothing muted.
+        mutedBeats: normaliseMuted(raw.mutedBeats, timeSigTop, accents),
+        mutedBeatsAccentsOff: normaliseMuted(raw.mutedBeatsAccentsOff, timeSigTop)
     };
 };
 
