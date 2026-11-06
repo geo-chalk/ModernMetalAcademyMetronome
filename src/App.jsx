@@ -36,23 +36,19 @@ import SoundConfig from './components/SoundConfig';
 import PresetBar from './components/PresetBar';
 
 
+// The modes a session is practised in; Info and Sound Config are screens, not modes.
+const PRACTICE_MODES = ['trainer', 'constant', 'sequence'];
+
 export default function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [mode, setMode] = useLocalStorage('metronome_app_mode', 'trainer');
+    // The page opens in the practice mode it was last in. Info and Sound Config
+    // are screens reached from the menu, not places to land, so a visit that
+    // ended on one of them starts in Trainer.
+    const [mode, setMode] = useLocalStorage('metronome_app_mode', 'trainer',
+        m => (PRACTICE_MODES.includes(m) ? m : 'trainer'));
     // Opt out of the two-column Trainer layout on wide screens (side menu).
     const [forceSingleColumn, setForceSingleColumn] = useLocalStorage('metronome_single_column', false);
     const fullscreen = useFullscreen();
-    useEffect(() => {
-        // Check if this is a new session (not a refresh)
-        const hasSeenLanding = sessionStorage.getItem('metronome_session_active');
-
-        if (!hasSeenLanding) {
-            // 1. This is the first time accessing the page in this tab
-            setMode('trainer');
-            // 2. Set the flag so refreshes are recognized later
-            sessionStorage.setItem('metronome_session_active', 'true');
-        }
-    }, []); // Empty dependency array so it only runs once on mount
 
     // Shared tempo across Trainer (its start BPM) and Constant (its tempo) — one
     // value, so the tempo carries over when switching between the two modes.
@@ -469,7 +465,7 @@ export default function App() {
                     </button>
                     {!isSettingsMode ? (
                         <div className="flex bg-white/5 rounded-lg p-0.5 border border-white/5">
-                            {['trainer', 'constant', 'sequence'].map((m) => (
+                            {PRACTICE_MODES.map((m) => (
                                 <button
                                     key={m}
                                     onClick={() => { if (m !== mode) handleMenuSelect(m); }}

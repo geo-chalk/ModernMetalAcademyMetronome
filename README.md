@@ -117,6 +117,9 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 
 Versioning follows the `version` field in `package.json`.
 
+### 0.12.2 — Opens in the mode you left
+* The page now comes back in the mode you were last in — Trainer, Constant or Sequence — instead of always starting in Trainer. Info and Sound Config are screens, not modes, so a visit that ended on one of them starts in Trainer.
+
 ### 0.12.1 — Numerators up to 25
 * The time signature's top number now goes up to **25** (it stopped at 15). Long odd meters like 17/8, 19/16 or 21/8 are selectable; they start with the downbeat accented, and the beat bars share the row as usual, so set your own grouping by clicking them.
 
