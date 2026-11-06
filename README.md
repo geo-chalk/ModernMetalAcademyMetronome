@@ -26,7 +26,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 * **BPM Range / total duration** readout so you can see where a session will land, and how long it will actually take, before you start. The total covers the playing time and the rests.
 
 ### Rhythm & feel
-* **Flexible time signatures**, including irregular meters (5/8, 6/8, 7/8, 9/8, 12/8) with denominators 2–16.
+* **Flexible time signatures**, including irregular meters (5/8, 6/8, 7/8, 9/8, 12/8) — numerators 1–25, denominators 2–16.
 * **Clickable beats** — click a beat bar to cycle it through accented → muted → normal. An accented beat gets the accent sound; a muted beat is silent and stays dark, so you can drop single beats out of the bar (the count-in still clicks every beat). Each time signature keeps its own pattern, and odd meters start from the usual grouping (7/8 on 1, 4, 6); a reset arrow beside the bars puts a changed meter back to its default. An accent toggle mutes the accents without losing the pattern.
 * **Count-in** — 0–4 lead-in bars before a session starts.
 
@@ -116,6 +116,9 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 ## 📝 Changelog
 
 Versioning follows the `version` field in `package.json`.
+
+### 0.12.1 — Numerators up to 25
+* The time signature's top number now goes up to **25** (it stopped at 15). Long odd meters like 17/8, 19/16 or 21/8 are selectable; they start with the downbeat accented, and the beat bars share the row as usual, so set your own grouping by clicking them.
 
 ### 0.12.0 — Mute single beats
 * **A beat bar now has three states.** One click accents a beat, as before; a second click **mutes** it; a third sets it back to normal. A muted beat is drawn as a hollow bar and, while playing, gets no click and no light — Mute bars for a single beat, so you can drop beat 3 out of 4/4 and hold the inner pulse yourself. It works on top of Mute bars, and like accents it's live mid-run: the next beat picks the change up.
