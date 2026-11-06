@@ -17,7 +17,7 @@ const TimeSignatureSelector = ({top, bottom, setTop, setBottom, isActive}) => {
                         disabled={isActive}
                         className="bg-transparent text-white text-2xl xs:text-3xl short:text-xl font-black focus:outline-none focus-visible:ring-2 focus-visible:ring-[#FF820C]/40 appearance-none cursor-pointer text-center z-10 pr-4 leading-none"
                     >
-                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(num => (
+                        {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25].map(num => (
                             <option key={num} value={num} className="bg-[#1E1E1E]">{num}</option>
                         ))}
                     </select>
