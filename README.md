@@ -9,9 +9,11 @@ A professional-grade, high-performance web metronome built for technical guitar 
 
 ## 🚀 Features
 
-### Two modes (switch from the toggle at the top)
+### Four modes (switch from the toggle at the top)
 * **Trainer** — automatically ramps the tempo as you play, to build stamina and master riffs incrementally.
 * **Constant** — a steady, high-precision metronome. Tempo is adjustable live while it plays.
+* **Sequence** — a hand-built routine of tempo steps and rests.
+* **Track** — upload a backing track and loop it at rising speeds, pitch preserved. No click; just the song.
 * The tempo is **shared** across both modes, so it carries over when you switch. Switching modes (or opening the menu) stops a running session.
 
 ### Trainer ramp controls
@@ -24,6 +26,16 @@ A professional-grade, high-performance web metronome built for technical guitar 
 * **Rest** — optional recovery between intervals (in seconds or bars). The metronome goes quiet, a **count-in leads you back in**, and the Cycle bar turns blue to show the rest. Short rests fill with as many count-in ticks as fit.
 * **Lock Final BPM** — keep clicking at the top tempo when the ramp finishes instead of stopping.
 * **BPM Range / total duration** readout so you can see where a session will land, and how long it will actually take, before you start. The total covers the playing time and the rests.
+
+### Track mode (backing-track speed trainer)
+* **Your own audio file** — MP3, WAV or M4A, chosen from the device (or dropped anywhere on the page on desktop). It stays on the device: nothing is uploaded anywhere, and it's remembered between visits.
+* **Whole-track passes** — the song plays from start to end at the start speed, then again one step faster, and so on until the end speed. The pitch stays put while the speed changes.
+* **Range in % or BPM** — set the start and end speed as a percentage of the recording (70% → 100%) or, once the song's tempo is known, in BPM (98 → 140). Every slider shows both readings.
+* **Song tempo** — type it, hit **Preview** (or press `P`) and tap the big BPM number along to the song, or let **Detect** listen to the file. Pick the range it falls in (Slow 50–110, Mid 90–180, Fast 140–260) and use **×2 / ÷2** if the answer is half- or double-time.
+* **Pos. / Neg. Increment** — the same ramp controls as the Trainer, including the see-saw.
+* **Rest** — an optional pause between passes. **Lock final speed** keeps looping at the end speed instead of stopping.
+* **Presets** — a Track drill saves like a Trainer drill; the song's tempo stays with the file, so one drill works for any song.
+* **Range readout** — where the ladder starts and ends, how many passes, and how long the session will take with this file.
 
 ### Rhythm & feel
 * **Flexible time signatures**, including irregular meters (5/8, 6/8, 7/8, 9/8, 12/8) — numerators 1–25, denominators 2–16.
@@ -41,7 +53,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 * **Screen stays awake** while the metronome is playing (Wake Lock — no permission prompt).
 * **Locked while running** — a Trainer session locks its settings so the drill can't shift mid-run; only Volume, Accents, and the mode switch stay live.
 * **Progress bars** for the current cycle and the whole session; beat indicators go dark during a rest.
-* **Keyboard:** `Space` to start/stop, `A` to toggle accents, `T` to tap tempo, `←`/`→` for ±5 BPM (`Shift` for ±1), `↑`/`↓` for ±20, `R` to round to the nearest 5.
+* **Keyboard:** `Space` to start/stop, `A` to toggle accents, `T` to tap tempo, `←`/`→` for ±5 BPM (`Shift` for ±1), `↑`/`↓` for ±20, `R` to round to the nearest 5, `P` to preview the track in Track mode.
 * **Mobile-first**, fixed-viewport, touch-friendly, remembers your settings on the device.
 * **Installable** — add it to your home screen and it opens full-screen, without the browser's URL and tab bars.
 * **Fullscreen** from the menu on Android and desktop, for the same effect without installing.
@@ -116,6 +128,11 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 ## 📝 Changelog
 
 Versioning follows the `version` field in `package.json`.
+
+### 0.13.0 — Track mode
+* New **Track** mode: upload a backing track and loop it at rising speeds, pitch preserved. A pass is the whole file; after each pass the speed steps up, from a start to an end speed set in **%** of the recording or in **BPM** of the song. The song's tempo can be typed, tapped along to the **Preview** (`P`), or **detected** from the file (pick the Slow / Mid / Fast range first; **×2 / ÷2** fix an octave slip). Pos./Neg. Increment, **Rest** between passes and **Lock final speed** work as in the Trainer, and a Track drill saves as a preset. A file can be dropped anywhere on the page.
+* The file is kept on the device (IndexedDB) and remembered between visits; if it has gone, the card asks for the same file again and keeps the song's tempo. Playback uses the browser's own pitch-preserving speed change, so nothing is decoded into memory and the song keeps playing with the screen off.
+* The Lock Final button is now a shared component, and the project has its first unit tests (`npm test`, vitest) for the speed ladder.
 
 ### 0.12.2 — Opens in the mode you left
 * The page now comes back in the mode you were last in — Trainer, Constant or Sequence — instead of always starting in Trainer. Info and Sound Config are screens, not modes, so a visit that ended on one of them starts in Trainer.

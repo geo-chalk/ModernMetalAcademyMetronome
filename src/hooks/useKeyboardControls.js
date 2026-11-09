@@ -41,18 +41,20 @@ const releaseSelectFocus = (event) => {
  *                 already returned above, so select-all still works.
  * @param onToggleMute
  *                 M — switch Mute bars on / off.
+ * @param onPreview
+ *                 P — Track mode: play / stop the preview of the file.
  */
-export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute} = {}) => {
+export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute, onPreview} = {}) => {
     // Handlers behind a ref so the listener binds exactly once. The previous
     // version listed onSpace as a dependency; because useMetronome's start/stop
     // aren't memoized, handleStop -> toggleMetronome changed identity on every
     // render and the listener was torn down and re-added every render. The BPM
     // handlers close over the current tempo, so they change every nudge — all
     // the more reason to keep them out of the listener's dependencies.
-    const handlersRef = useRef({onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute});
+    const handlersRef = useRef({onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute, onPreview});
     useEffect(() => {
-        handlersRef.current = {onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute};
-    }, [onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute]);
+        handlersRef.current = {onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute, onPreview};
+    }, [onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute, onPreview]);
 
     useEffect(() => {
         const handleKeyDown = (event) => {
@@ -67,7 +69,7 @@ export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAc
             // instead of opening its dropdown.
             if (isTypingTarget(event.target) || isTypingTarget(document.activeElement)) return;
 
-            const {onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute} = handlersRef.current;
+            const {onSpace, onTap, onNudge, onSnap, onToggleAccents, onToggleMute, onPreview} = handlersRef.current;
 
             // Ctrl, Cmd and Alt always belong to the browser or the OS (Cmd+R
             // reload, Cmd+T new tab, Alt+Arrow history, Ctrl+Arrow Mission Control
@@ -136,6 +138,13 @@ export const useKeyboardControls = ({onSpace, onTap, onNudge, onSnap, onToggleAc
                 if (event.repeat) return;   // holding M would strobe muting on/off
                 event.preventDefault();
                 onToggleMute();
+                return;
+            }
+
+            if (isKey('p', 'KeyP') && onPreview) {
+                if (event.repeat) return;   // holding P would strobe the preview
+                event.preventDefault();
+                onPreview();
             }
         };
 

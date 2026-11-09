@@ -131,8 +131,8 @@ const Info = () => {
 
     const sessionGuide = [
         {
-            term: "Trainer & Constant",
-            desc: <>The toggle up top switches between the two modes, and your tempo carries across both. Switching
+            term: "Trainer, Constant, Sequence & Track",
+            desc: <>The toggle up top switches modes; the tempo carries across Trainer and Constant. Switching
                 modes — or opening the menu — stops a running session.</>
         },
         {
@@ -153,6 +153,42 @@ const Info = () => {
         },
     ];
 
+    // Track mode: a backing track looped at rising speeds, no click.
+    const trackGuide = [
+        {
+            term: "Choose a file",
+            desc: <>Pick an MP3, WAV or M4A from your device (or drop it anywhere on the page). It stays on this device —
+                nothing is uploaded — and it's remembered the next time you open the app. If the browser has
+                cleared it, the card asks for the same file again and keeps the tempo you set.</>
+        },
+        {
+            term: "Song tempo",
+            desc: <>Type the song's BPM, hit <Em>Preview</Em> (or press <Em>P</Em>) and <Em>tap the big BPM
+                number</Em> along to it, or let <Em>Detect</Em> listen to the file. Pick the range the tempo
+                falls in first — Slow, Mid or Fast — since the detector folds everything into that range, and
+                use <Em>×2 / ÷2</Em> if the answer is half- or double-time. Percent ranges work without a
+                tempo; BPM ranges and the BPM readout need it.</>
+        },
+        {
+            term: "Start & End speed",
+            desc: <>Each pass plays the <Em>whole track</Em> once, starting at the start speed and stepping up by
+                the <Em>Pos. Increment</Em> after every pass until the end speed. The pitch doesn't change with
+                the speed. Set the range in <Em>%</Em> of the recording or in <Em>BPM</Em>; every slider shows
+                both.</>
+        },
+        {
+            term: "Rest & Lock final speed",
+            desc: <>Rest pauses the song between passes. Lock final speed keeps looping at the end speed instead
+                of stopping. The range readout tells you how many passes there are and how long they'll take
+                with this file.</>
+        },
+        {
+            term: "Presets",
+            desc: <>A Track drill saves like a Trainer drill. The song's tempo isn't part of it — it belongs to
+                the file — so one drill applies to any song.</>
+        },
+    ];
+
     const cycles = [
         {title: "1. Exercise | Cycle One", subtitle: "Top speed minus 20 BPM", details: "2 min burst | +2 BPM every 10s"},
         {title: "2. Exercise | Cycle Two", subtitle: "Cycle One start + 5 BPM", details: "2 min burst | +2 BPM every 10s"},
@@ -168,6 +204,7 @@ const Info = () => {
         {key: "Shift ← →", action: "Tempo ± 1"},
         {key: "↑ ↓", action: "Tempo ± 20"},
         {key: "R", action: "Round tempo to nearest 5"},
+        {key: "P", action: "Preview the track (Track mode)"},
     ];
 
     return (
@@ -200,6 +237,11 @@ const Info = () => {
             {/* How the app works (Trainer) */}
             <Section title="How the Trainer Works" defaultOpen>
                 <DefList items={trainerGuide}/>
+            </Section>
+
+            {/* Track mode */}
+            <Section title="Track Mode (Backing Tracks)">
+                <DefList items={trackGuide}/>
             </Section>
 
             {/* Sounds & settings */}

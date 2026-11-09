@@ -13,7 +13,8 @@ const BPMDisplay = ({
                         onTapReset,
                         tapCount = 0,
                         tapPulse = 0,
-                        minTaps = 3
+                        minTaps = 3,
+                        caption = 'BPM'
                     }) => {
     const [editing, setEditing] = useState(false);
     const [draft, setDraft] = useState('');
@@ -105,7 +106,7 @@ const BPMDisplay = ({
                         {tapCount < minTaps ? `Tap ${tapCount}/${minTaps}` : `Tap ×${tapCount}`}
                     </span>
                 ) : (
-                    <span className="text-white/40 uppercase tracking-[0.2em] text-xs font-bold">BPM</span>
+                    <span className="text-white/40 uppercase tracking-[0.2em] text-xs font-bold">{caption}</span>
                 )}
                 {!locked && !editing && (
                     <button

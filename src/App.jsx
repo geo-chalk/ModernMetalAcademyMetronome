@@ -34,10 +34,17 @@ import AccentSwitch from './components/AccentSwitch.jsx';
 import SideMenu from './components/SideMenu';
 import SoundConfig from './components/SoundConfig';
 import PresetBar from './components/PresetBar';
+import LockFinalButton from './components/LockFinalButton';
+import TrackPanel from './components/track/TrackPanel';
+import TrackStrip from './components/track/TrackStrip';
+import {useTrackSettings} from './hooks/useTrackSettings';
+import {useTrackLibrary} from './hooks/useTrackLibrary';
+import {useTrackTrainer} from './hooks/useTrackTrainer';
+import {rateToBpm, rateToPct} from './constants/track';
 
 
 // The modes a session is practised in; Info and Sound Config are screens, not modes.
-const PRACTICE_MODES = ['trainer', 'constant', 'sequence'];
+const PRACTICE_MODES = ['trainer', 'constant', 'sequence', 'track'];
 
 export default function App() {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -161,8 +168,34 @@ export default function App() {
         setIsAccentEnabled
     } = useMetronome(startBpm, soundSettings[activePack], pattern, muteSettings);
 
+    // --- Track mode -----------------------------------------------------------
+    // Loops an uploaded audio file at rising speeds. It has nothing to do with
+    // the click: its own settings, its own file store, its own player. The three
+    // hooks are handed to TrackPanel whole; App only wires Start/Stop and the
+    // readout.
+    const trackSettings = useTrackSettings();
+    const trackLibrary = useTrackLibrary({
+        currentId: trackSettings.currentId, setCurrentId: trackSettings.setCurrentId, track: trackSettings.track,
+        rememberTrack: trackSettings.rememberTrack, forgetTrack: trackSettings.forgetTrack
+    });
+    const trackTrainer = useTrackTrainer({
+        audioRef: trackLibrary.audioRef, duration: trackLibrary.duration, volume: trackSettings.volume
+    });
+    const isTrack = mode === 'track';
+    const {setOriginalBpm: setTrackBpm} = trackSettings;
+    // Start needs a playable file and a ladder (a BPM range without a tempo has none).
+    const trackReady = trackLibrary.status === 'ready' && trackSettings.rates.length > 0;
+    const anyActive = isActive || trackTrainer.isActive;
+
 
     const handleStart = useCallback(() => {
+        // Track mode plays the file, not the click: nothing is scheduled.
+        if (mode === 'track') {
+            trackTrainer.start(trackSettings.rates, {
+                restSeconds: trackSettings.restSeconds, lockFinal: trackSettings.lockFinal
+            });
+            return;
+        }
 
         // Sequence mode takes its tempo from the first step, not the shared start tempo.
         const startTempo = mode === 'sequence' ? seqTimeline[0].bpm : startBpm;
@@ -183,29 +216,34 @@ export default function App() {
             countdownBars,
             lockFinalBpm
         }, startTempo, soundSettings[activePack]); // FIX: Pass only the active pack
-    }, [mode, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds, intervalBars, totalReps, restSeconds, restBars, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm, seqTimeline]);
+    }, [mode, startBpm, increment, negativeIncrement, intervalUnit, stepSeconds, totalSeconds, intervalBars, totalReps, restSeconds, restBars, timeSigTop, timeSigBottom, countdownBars, start, soundSettings, activePack, lockFinalBpm, seqTimeline,
+        trackTrainer, trackSettings.rates, trackSettings.restSeconds, trackSettings.lockFinal]);
 
     const handleStop = useCallback(() => {
+        if (mode === 'track') {
+            trackTrainer.stop();     // a session or a preview, whichever is on
+            return;
+        }
         if (mode === 'constant') setStartBpm(bpm);
         stop();
-    }, [mode, bpm, stop]);
+    }, [mode, bpm, stop, trackTrainer]);
 
     const toggleMetronome = useCallback(() => {
-        isActive ? handleStop() : handleStart();
-    }, [isActive, handleStart, handleStop]);
+        anyActive ? handleStop() : handleStart();
+    }, [anyActive, handleStart, handleStop]);
 
     // Changing screens from the menu always stops a running session first.
     const handleMenuSelect = useCallback((newMode) => {
-        if (isActive) handleStop();
+        if (isActive || trackTrainer.status !== 'idle') handleStop();
         setMode(newMode);
-    }, [isActive, handleStop, setMode]);
+    }, [isActive, trackTrainer.status, handleStop, setMode]);
 
     // Keep the screen awake while the metronome is playing.
-    useWakeLock(isActive);
+    useWakeLock(isActive || trackTrainer.status !== 'idle');
 
     // In Trainer mode a running session is locked — no parameter changes mid-drill.
     // (Constant mode stays live-editable so the tempo can be adjusted while playing.)
-    const trainerLock = isActive && (mode === 'trainer' || mode === 'sequence');
+    const trainerLock = (isActive && (mode === 'trainer' || mode === 'sequence')) || (isTrack && trackTrainer.isActive);
 
     const isSettingsMode = mode === 'info' || mode === 'sound';
 
@@ -215,12 +253,13 @@ export default function App() {
     // column scrolls on its own, so the readout never moves while a setting is
     // adjusted. Constant, Info and Sound keep the single narrow card, and the
     // side menu can pin Trainer to one column as well.
-    const twoCol = (mode === 'trainer' || mode === 'sequence') && !forceSingleColumn;
+    const twoCol = (mode === 'trainer' || mode === 'sequence' || isTrack) && !forceSingleColumn;
 
     // Tempo shortcuts are inert during a Trainer run (the ramp owns the tempo and
     // would overwrite anything set) and on the settings screens, where the readout
     // isn't on screen — silently moving an invisible tempo is worse than a no-op.
-    const tempoKeysEnabled = !trainerLock && !isSettingsMode && mode !== 'sequence';
+    // In Track mode the tempo keys set the song's tempo, so they need a song.
+    const tempoKeysEnabled = !trainerLock && !isSettingsMode && mode !== 'sequence' && !(isTrack && !trackSettings.track);
 
     // The accent shortcut is gated differently from the tempo keys: accents are one
     // of the three controls deliberately left live during a Trainer run, and the
@@ -228,31 +267,50 @@ export default function App() {
     // has no switch to reflect the change, so that's the one screen it's inert on.
     const accentKeyEnabled = mode !== 'info';
 
-    const displayBpm = isActive ? bpm : (mode === 'sequence' ? seqSteps[0].bpm : startBpm);
+    // Track mode's readout is the song's tempo scaled by the current speed. With
+    // no tempo known it shows the speed itself while playing ("80%"), and a dash
+    // while idle — the invitation to type or tap one.
+    const trackBpm = trackTrainer.isActive
+        ? rateToBpm(trackTrainer.currentRate, trackSettings.originalBpm)
+        : trackSettings.originalBpm;
+    const displayBpm = isTrack
+        ? (trackBpm ?? (trackTrainer.isActive ? `${rateToPct(trackTrainer.currentRate)}%` : '—'))
+        : isActive ? bpm : (mode === 'sequence' ? seqSteps[0].bpm : startBpm);
+    const bpmCaption = isTrack && trackTrainer.isActive && trackBpm == null ? 'Speed' : 'BPM';
 
     const displaySetter = useCallback((val) => {
+        if (mode === 'track') {
+            setTrackBpm(val, 'manual');   // the pencil and the arrows set the song's tempo
+            return;
+        }
         setStartBpm(val);
         // Reflect on the live click only when it should: always in Constant, and
         // in Trainer only before a session starts (a running ramp owns the tempo).
         if (mode === 'constant' || !isActive) setBpm(val);
-    }, [mode, isActive, setStartBpm, setBpm]);
+    }, [mode, isActive, setStartBpm, setBpm, setTrackBpm]);
 
     // One engine, two surfaces: the BPM pad's pointerdown and the T shortcut both
     // call `tapTempo`. Disabled during a Trainer run for the same reason the slider
     // is — the ramp owns the tempo and would overwrite any tapped value at the next
     // step boundary.
+    const tapSetter = useCallback((val) => {
+        if (mode === 'track') setTrackBpm(val, 'tap');   // tapped along to the preview
+        else displaySetter(val);
+    }, [mode, setTrackBpm, displaySetter]);
     const {tap: tapTempo, reset: resetTapTempo, tapCount, tapPulse} =
-        useTapTempo(displaySetter, {enabled: tempoKeysEnabled});
+        useTapTempo(tapSetter, {enabled: tempoKeysEnabled});
 
     // Arrow nudges and R (snap onto the 5 BPM grid) work off displayBpm, so in
     // Constant mode they adjust the live tempo and otherwise the stored one.
+    // (In Track mode the readout can be a dash — no song tempo yet — which has
+    // nothing to nudge from; tapping is the way to set it.)
     const nudgeBpm = useCallback((delta) => {
-        if (!tempoKeysEnabled) return;
+        if (!tempoKeysEnabled || typeof displayBpm !== 'number') return;
         displaySetter(clampBpm(displayBpm + delta));
     }, [tempoKeysEnabled, displaySetter, displayBpm]);
 
     const snapBpmToGrid = useCallback(() => {
-        if (!tempoKeysEnabled) return;
+        if (!tempoKeysEnabled || typeof displayBpm !== 'number') return;
         displaySetter(snapBpm(displayBpm));
     }, [tempoKeysEnabled, displaySetter, displayBpm]);
 
@@ -275,15 +333,23 @@ export default function App() {
     // The Mute bars switch lives on the playing screens only, so that's where M works.
     // Like the accent key it's live mid-run: the next bar picks the change up.
     const toggleMute = useCallback(() => {
-        if (isSettingsMode) return;
+        if (isSettingsMode || isTrack) return;   // no bars to mute in Track mode
         setMuteEnabled(on => !on);
-    }, [isSettingsMode, setMuteEnabled]);
+    }, [isSettingsMode, isTrack, setMuteEnabled]);
+
+    // P previews the track at its own speed, for tapping the tempo along to it.
+    // Only in Track mode with a playable file, and not over a running session.
+    const previewTrack = useCallback(() => {
+        if (!isTrack || trackLibrary.status !== 'ready' || trackTrainer.isActive) return;
+        trackTrainer.togglePreview();
+    }, [isTrack, trackLibrary.status, trackTrainer]);
 
     useKeyboardControls({
         onSpace: toggleMetronome, onTap: tapTempo,
         onNudge: nudgeBpm, onSnap: snapBpmToGrid,
         onToggleAccents: toggleAccents,
-        onToggleMute: toggleMute
+        onToggleMute: toggleMute,
+        onPreview: previewTrack
     });
 
     // --- Presets -----------------------------------------------------------
@@ -458,8 +524,10 @@ export default function App() {
                         className="group p-2 -ml-2 text-white/40 hover:text-white transition-colors flex items-center gap-2"
                     >
                         <Menu size={24}/>
+                        {/* Four mode tabs plus this word don't fit a 320px phone; the icon
+                            alone does the job there. */}
                         <span
-                            className="text-[10px] font-black tracking-[0.2em] uppercase mt-0.5 group-hover:text-white transition-colors">
+                            className="hidden xs:inline text-[10px] font-black tracking-[0.2em] uppercase mt-0.5 group-hover:text-white transition-colors">
                 Menu
             </span>
                     </button>
@@ -469,7 +537,7 @@ export default function App() {
                                 <button
                                     key={m}
                                     onClick={() => { if (m !== mode) handleMenuSelect(m); }}
-                                    className={`px-3 py-1.5 rounded-md text-[10px] font-black uppercase tracking-widest transition-all ${
+                                    className={`px-1 xs:px-1.5 sm:px-3 py-1.5 rounded-md text-[9px] xs:text-[10px] font-black uppercase tracking-normal xs:tracking-wider sm:tracking-widest transition-all ${
                                         mode === m ? 'bg-[#FF820C] text-white' : 'text-white/40 hover:text-white'
                                     }`}
                                 >
@@ -506,33 +574,50 @@ export default function App() {
                         height-constrained column would squash it to nothing. */}
                     <div className={`flex flex-col gap-3 short:gap-1 [&>*]:shrink-0 ${
                         twoCol ? 'twocol:min-h-0 twocol:overflow-y-auto twocol:overflow-x-hidden twocol:[justify-content:safe_center] no-scrollbar touch-pan-y' : ''}`}>
+                    {/* Count-in, meter, beat lights and Mute bars belong to the click, so
+                        Track mode shows the readout alone. */}
                     <div className="flex items-center justify-between mb-0">
-                        <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>
+                        {!isTrack && <CountdownSelector value={countdownBars} setter={setCountdownBars} isActive={isActive}/>}
                         <div className="flex-1">
-                            <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={isActive}
-                                        locked={trainerLock || mode === 'sequence'}
+                            <BPMDisplay bpm={displayBpm} setBpm={displaySetter} isActive={anyActive}
+                                        locked={trainerLock || mode === 'sequence' || (isTrack && !trackSettings.track)}
+                                        caption={bpmCaption}
                                         onTap={tapTempo} onTapReset={resetTapTempo}
                                         tapCount={tapCount} tapPulse={tapPulse} minTaps={MIN_TAPS}/>
                         </div>
-                        <TimeSignatureSelector top={timeSigTop} bottom={timeSigBottom} setTop={setTimeSigTop}
-                                               setBottom={setTimeSigBottom} isActive={isActive}/>
+                        {!isTrack && <TimeSignatureSelector top={timeSigTop} bottom={timeSigBottom} setTop={setTimeSigTop}
+                                                            setBottom={setTimeSigBottom} isActive={isActive}/>}
                     </div>
 
-                    <BeatIndicators isActive={isActive} currentBeat={currentBeat}
-                                    beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}
-                                    isResting={isResting} pulseTick={beatTick} beatMuted={isBeatMuted}
-                                    accents={pattern.accents} muted={mutedNow}
-                                    accentsEnabled={isAccentEnabled} onCycleBeat={cycleBeatWithSwitch}
-                                    onReset={resetPattern} canReset={!patternIsDefault}
-                                    sigLabel={`${timeSigTop}/${timeSigBottom}`}/>
+                    {!isTrack && (
+                        <BeatIndicators isActive={isActive} currentBeat={currentBeat}
+                                        beatsPerMeasure={isActive ? beatsPerMeasure : timeSigTop}
+                                        isResting={isResting} pulseTick={beatTick} beatMuted={isBeatMuted}
+                                        accents={pattern.accents} muted={mutedNow}
+                                        accentsEnabled={isAccentEnabled} onCycleBeat={cycleBeatWithSwitch}
+                                        onReset={resetPattern} canReset={!patternIsDefault}
+                                        sigLabel={`${timeSigTop}/${timeSigBottom}`}/>
+                    )}
 
-                    <TrainerProgress isActive={isActive} progress={stepProgress} totalProgress={totalProgress}
-                                     isResting={isResting} mode={mode}
-                                     stepLabel={mode === 'sequence' && segmentIndex >= 0 ? `Step ${seqTimeline[segmentIndex]?.step + 1} of ${seqSteps.length}` : 'Cycle'}/>
+                    <TrainerProgress isActive={anyActive}
+                                     progress={isTrack ? trackTrainer.passProgress : stepProgress}
+                                     totalProgress={isTrack ? trackTrainer.totalProgress : totalProgress}
+                                     isResting={isTrack ? trackTrainer.isResting : isResting} mode={mode}
+                                     stepLabel={isTrack
+                                         ? (trackTrainer.isActive ? `Pass ${trackTrainer.passIndex + 1} of ${trackTrainer.passCount}` : 'Pass')
+                                         : mode === 'sequence' && segmentIndex >= 0 ? `Step ${seqTimeline[segmentIndex]?.step + 1} of ${seqSteps.length}` : 'Cycle'}/>
 
                     {mode === 'constant' && <ElapsedTime isActive={isActive} seconds={elapsedSeconds}/>}
 
-                        {mode !== 'sequence' && (
+                    {isTrack && (
+                        <TrackStrip name={trackSettings.track?.name} position={trackTrainer.position}
+                                    duration={trackLibrary.duration} isPreviewing={trackTrainer.isPreviewing}
+                                    isActive={trackTrainer.isActive} canPreview={trackLibrary.status === 'ready'}
+                                    onTogglePreview={trackTrainer.togglePreview}
+                                    volume={trackSettings.volume} setVolume={trackSettings.setVolume}/>
+                    )}
+
+                        {mode !== 'sequence' && !isTrack && (
                             <StartBPMSlider
                                 label={mode === 'trainer' ? "Start BPM" : "Tempo"}
                                 value={isActive && mode === 'constant' ? bpm : startBpm}
@@ -542,12 +627,14 @@ export default function App() {
                             />
                         )}
 
-                        <MuteBars enabled={muteEnabled} setEnabled={setMuteEnabled}
-                                  style={muteStyle} setStyle={setMuteStyle}
-                                  chance={muteChance} setChance={setMuteChance}
-                                  maxRun={muteMaxRun} setMaxRun={setMuteMaxRun}
-                                  onBars={muteOn} setOnBars={setMuteOn}
-                                  offBars={muteOff} setOffBars={setMuteOff}/>
+                        {!isTrack && (
+                            <MuteBars enabled={muteEnabled} setEnabled={setMuteEnabled}
+                                      style={muteStyle} setStyle={setMuteStyle}
+                                      chance={muteChance} setChance={setMuteChance}
+                                      maxRun={muteMaxRun} setMaxRun={setMuteMaxRun}
+                                      onBars={muteOn} setOnBars={setMuteOn}
+                                      offBars={muteOff} setOffBars={setMuteOff}/>
+                        )}
                     </div>
 
                         {/* Right column: the drill. The dimming during a run sits on an
@@ -572,6 +659,12 @@ export default function App() {
                                                 activeType={seqTimeline[segmentIndex]?.type}
                                                 locked={isActive} formatDuration={formatDuration}
                                                 totalSeconds={seqSeconds}/>
+                            </div>
+                        )}
+                        {isTrack && (
+                            <div className={`pt-4 border-t border-white/5 ${
+                                twoCol ? 'twocol:pt-0 twocol:border-t-0 twocol:border-l twocol:pl-6 twocol:min-h-0 twocol:overflow-y-auto twocol:overflow-x-hidden no-scrollbar touch-pan-y' : ''}`}>
+                                <TrackPanel settings={trackSettings} library={trackLibrary} locked={trackTrainer.isActive}/>
                             </div>
                         )}
                         {mode === 'trainer' && (
@@ -646,54 +739,8 @@ export default function App() {
                                         mode={mode}
                                     />
 
-                                    <button
-                                        onClick={() => setLockFinalBpm(!lockFinalBpm)}
-                                        disabled={isActive}
-                                        className={`
-            group relative flex shrink-0 items-center gap-1.5 px-3 py-2 rounded-xl border transition-all duration-300 whitespace-nowrap
-            ${lockFinalBpm
-                                            ? "bg-[#FF820C]/10 border-[#FF820C] text-[#FF820C] shadow-[0_0_15px_rgba(255,130,12,0.1)]"
-                                            : "bg-white/5 border-white/10 text-white/40 hover:border-white/20 hover:text-white hover:bg-white/[0.07]"
-                                        }
-            ${isActive ? "opacity-30 cursor-not-allowed" : "active:scale-95"}
-        `}
-                                    >
-                                        {/* Dynamic Icon with slight bounce animation */}
-                                        <div
-                                            className={`transition-transform duration-300 ${lockFinalBpm ? "scale-110" : "scale-100"}`}>
-                                            {lockFinalBpm ? (
-                                                <div className="relative">
-                                                    <div
-                                                        className="absolute inset-0 blur-sm bg-[#FF820C]/30 rounded-full"/>
-                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                                         viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                         strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                                                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-                                                    </svg>
-                                                </div>
-                                            ) : (
-                                                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14"
-                                                     viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                                                     strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                                    <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
-                                                    <path d="M7 11V7a5 5 0 0 1 9.9-1"/>
-                                                </svg>
-                                            )}
-                                        </div>
-
-                                        <span
-                                            className="text-[10px] font-black uppercase tracking-[0.08em] leading-none mt-0.5"
-                                            style={{fontFamily: "'K2D', sans-serif"}}>
-            {lockFinalBpm ? "Locked" : "Lock Final BPM"}
-        </span>
-
-                                        {/* Subtle inner glow for active state */}
-                                        {lockFinalBpm && (
-                                            <div
-                                                className="absolute inset-0 rounded-xl border border-white/10 pointer-events-none"/>
-                                        )}
-                                    </button>
+                                    <LockFinalButton locked={lockFinalBpm} onToggle={() => setLockFinalBpm(!lockFinalBpm)}
+                                                     disabled={isActive}/>
                                 </div>
                               </div>
                             </div>
@@ -717,7 +764,8 @@ export default function App() {
             {/* Footer */}
             <div
                 className="p-4 sm:p-6 pt-2 flex-none flex flex-col items-center gap-2 border-t border-white/5 bg-[#1E1E1E] short:px-2 short:py-1 short:gap-0">
-                {!isSettingsMode && <PlayButton isActive={isActive} onClick={toggleMetronome}/>}
+                {!isSettingsMode && <PlayButton isActive={anyActive} onClick={toggleMetronome}
+                                                disabled={isTrack && !anyActive && !trackReady}/>}
                 <span className="text-[9px] text-white/20 font-mono tracking-widest uppercase short:hidden">
                         v{packageJson.version}
                     </span>

@@ -1,7 +1,7 @@
 import React, {memo} from 'react';
 
 const TrainerProgress = memo(({isActive, progress, totalProgress, isResting, mode, stepLabel = 'Cycle'}) => {
-    if (mode !== 'trainer' && mode !== 'sequence') return null;
+    if (mode !== 'trainer' && mode !== 'sequence' && mode !== 'track') return null;
 
     const robotoStack = {fontFamily: "'K2D', sans-serif"};
     // Rest uses a cool sky-blue to read as "cooldown" vs the orange "work" colour.
