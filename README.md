@@ -33,7 +33,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 ### Sound
 * **Sound packs:** *Synth* (tunable pitched clicks) or *Natural* (sampled percussion).
 * **Per-role sounds** — separate accent, click, and count-in sounds, each with a **Test Loop** to preview.
-* Master **volume** and **accents** available on the main screen and in Sound Config.
+* Master **volume** and **accents** available on the main screen and in Sound Config. The volume goes up to **+12 dB** above the clicks' recorded level; a soft clipper on the output keeps it from distorting harshly, and a tick on the slider marks 0 dB.
 
 ### Experience
 * **Tap tempo** — tap the big BPM number in time with the music, or press `T`. It locks on after three taps, tracks a rolling window of the last 8, rejects fumbled taps, and resets after 2s of silence.
@@ -116,6 +116,9 @@ This automatically configures the git identity from your `.env`, runs `vite buil
 ## 📝 Changelog
 
 Versioning follows the `version` field in `package.json`.
+
+### 0.12.3 — Louder clicks
+* The master volume now goes up to **+12 dB** (it stopped at the clicks' recorded level before). A soft clipper on the master output keeps the boosted clicks from hard-clipping — a limiter was tried first and gave almost all of the boost back on something as short as a click — and a tick on the slider marks 0 dB. A stored volume outside the range is clamped on load.
 
 ### 0.12.2 — Opens in the mode you left
 * The page now comes back in the mode you were last in — Trainer, Constant or Sequence — instead of always starting in Trainer. Info and Sound Config are screens, not modes, so a visit that ended on one of them starts in Trainer.

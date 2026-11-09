@@ -4,6 +4,33 @@ import * as Tone from 'tone';
 import {useLocalStorage} from './useLocalStorage';
 import {SOUND_ASSETS} from '../constants/sounds';
 import {INITIAL_MUTE_STATE, nextBarMute} from '../constants/barMute';
+import {SOFT_CLIP_KNEE, VOLUME_DEFAULT_DB, clampVolume} from '../constants/volume';
+
+// The master soft clipper sits on Tone's one Destination, so it is created once
+// for the page, not once per mount (StrictMode mounts the hook twice in dev).
+//
+// Why a saturation curve and not a limiter: a click is all transient. Measured
+// on the synth click at +12 dB, a Tone.Limiter (3 ms attack) still let the
+// first milliseconds through at about +5 dBFS — hard-clipped at the output —
+// and a zero-attack compressor held the peak but gave nearly all of the boost
+// back (about +2 dB louder than at 0 dB). The curve below holds every sample
+// under full scale by construction and keeps about +5.6 dB of the boost as
+// loudness; what it adds is a little saturation on the click, which on a
+// metronome reads as a harder click rather than distortion. It is a straight
+// line up to SOFT_CLIP_KNEE and bends smoothly towards 1 above it, so at or
+// below 0 dB the clicks pass through as they are.
+let masterClipper = null;
+const softClip = (x) => {
+    const a = Math.abs(x);
+    if (a <= SOFT_CLIP_KNEE) return x;
+    const over = (a - SOFT_CLIP_KNEE) / (1 - SOFT_CLIP_KNEE);
+    return Math.sign(x) * (SOFT_CLIP_KNEE + (1 - SOFT_CLIP_KNEE) * Math.tanh(over));
+};
+const installMasterClipper = () => {
+    if (masterClipper) return;
+    masterClipper = new Tone.WaveShaper(softClip, 4096);
+    Tone.getDestination().chain(masterClipper);
+};
 
 export const useMetronome = (initialBpm, initialSoundSettings, beatPattern, muteSettings) => {
     const [bpm, setBpm] = useState(initialBpm);
@@ -17,7 +44,9 @@ export const useMetronome = (initialBpm, initialSoundSettings, beatPattern, mute
     const [elapsedSeconds, setElapsedSeconds] = useState(0);   // whole seconds played (count-in and rests excluded)
     const [beatTick, setBeatTick] = useState(0);   // increments each beat — restarts the pulse
     const [beatsPerMeasure, setBeatsPerMeasure] = useState(4);
-    const [volume, setVolume] = useLocalStorage('metronome_volume', -6);
+    // dB on the master output. Stored values are clamped on read: the range has
+    // changed before (0 → +12 at the top) and may again.
+    const [volume, setVolume] = useLocalStorage('metronome_volume', VOLUME_DEFAULT_DB, clampVolume);
     const [isAccentEnabled, setIsAccentEnabled] = useLocalStorage('metronome_accents', true);
 
     const clickSynth = useRef(null);
@@ -61,6 +90,10 @@ export const useMetronome = (initialBpm, initialSoundSettings, beatPattern, mute
     const muteStateRef = useRef(INITIAL_MUTE_STATE);   // see constants/barMute.js
 
     useEffect(() => {
+        // Boosting past 0 dB would hard-clip the clicks at the output; the soft
+        // clipper keeps every sample under full scale instead.
+        installMasterClipper();
+
         clickSynth.current = new Tone.Synth({
             oscillator: {type: "triangle"}, envelope: {
                 attack: 0.002, decay: 0.08, sustain: 0, release: 0.08
@@ -93,7 +126,7 @@ export const useMetronome = (initialBpm, initialSoundSettings, beatPattern, mute
     }, [bpm]);
 
     useEffect(() => {
-        Tone.getDestination().volume.value = volume;
+        Tone.getDestination().volume.value = clampVolume(volume);
     }, [volume]);
 
     useEffect(() => {
