@@ -45,7 +45,7 @@ A professional-grade, high-performance web metronome built for technical guitar 
 ### Sound
 * **Sound packs:** *Synth* (tunable pitched clicks) or *Natural* (sampled percussion).
 * **Per-role sounds** — separate accent, click, and count-in sounds, each with a **Test Loop** to preview.
-* Master **volume** and **accents** available on the main screen and in Sound Config.
+* Master **volume** and **accents** available on the main screen and in Sound Config. The volume goes up to **+12 dB** above the clicks' recorded level; a soft clipper on the output keeps it from distorting harshly, and a tick on the slider marks 0 dB.
 
 ### Experience
 * **Tap tempo** — tap the big BPM number in time with the music, or press `T`. It locks on after three taps, tracks a rolling window of the last 8, rejects fumbled taps, and resets after 2s of silence.
@@ -133,6 +133,9 @@ Versioning follows the `version` field in `package.json`.
 * New **Track** mode: upload a backing track and loop it at rising speeds, pitch preserved. A pass is the whole file; after each pass the speed steps up, from a start to an end speed set in **%** of the recording or in **BPM** of the song. The song's tempo can be typed, tapped along to the **Preview** (`P`), or **detected** from the file (pick the Slow / Mid / Fast range first; **×2 / ÷2** fix an octave slip). Pos./Neg. Increment, **Rest** between passes and **Lock final speed** work as in the Trainer, and a Track drill saves as a preset. A file can be dropped anywhere on the page.
 * The file is kept on the device (IndexedDB) and remembered between visits; if it has gone, the card asks for the same file again and keeps the song's tempo. Playback uses the browser's own pitch-preserving speed change, so nothing is decoded into memory and the song keeps playing with the screen off.
 * The Lock Final button is now a shared component, and the project has its first unit tests (`npm test`, vitest) for the speed ladder.
+
+### 0.12.3 — Louder clicks
+* The master volume now goes up to **+12 dB** (it stopped at the clicks' recorded level before). A soft clipper on the master output keeps the boosted clicks from hard-clipping — a limiter was tried first and gave almost all of the boost back on something as short as a click — and a tick on the slider marks 0 dB. A stored volume outside the range is clamped on load.
 
 ### 0.12.2 — Opens in the mode you left
 * The page now comes back in the mode you were last in — Trainer, Constant or Sequence — instead of always starting in Trainer. Info and Sound Config are screens, not modes, so a visit that ended on one of them starts in Trainer.
