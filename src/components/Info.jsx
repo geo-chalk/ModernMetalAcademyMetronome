@@ -111,8 +111,10 @@ const Info = () => {
     const settingsGuide = [
         {
             term: "Volume & Accents",
-            desc: <>The volume slider and Accents toggle sit on the main screen and in Sound Config. Accents give
-                the marked beats of the bar their own sound; the toggle mutes them without losing the pattern.</>
+            desc: <>The volume slider and Accents toggle sit on the main screen and in Sound Config. The slider goes
+                up to <Em>+12 dB</Em> above the clicks' recorded level (the tick marks 0 dB); a soft clipper keeps the
+                boost from distorting harshly. Accents give the marked beats of the bar their own sound; the toggle mutes them
+                without losing the pattern.</>
         },
         {
             term: "Sound Pack",
